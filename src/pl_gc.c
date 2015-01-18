@@ -21,7 +21,7 @@ int gc_manager_halt(gc_manager_t *manager){
 	object_t *iter= NULL;
 	
 	for(iter=manager->object_pool; iter<gc_manager_object_pool_end(manager); iter=gc_object_next(iter)){
-		obj_free(iter);
+		object_halt(iter);
 	}
 	free(manager->object_pool);
 	return 0;
@@ -117,7 +117,7 @@ int gc_manager_zip(gc_manager_t *manager){
 	object_t *iter = NULL;
 	object_t *shadow_object = NULL;
 	object_t *shadow_pool = NULL;
-	object_gc_broken_t *broken_value = NULL;
+	object_gc_broken_part_t *broken_value = NULL;
 	size_t object_pool_size= NULL;
 	size_t mark;
 	
@@ -127,7 +127,7 @@ int gc_manager_zip(gc_manager_t *manager){
 	
 	for(iter=manager->object_pool; iter<gc_manager_object_pool_end(manager); iter=gc_object_next(iter)){
 		if(iter->mark != mark) {
-			obj_free(iter);
+			object_halt(iter);
 			continue;
 		}
 		
@@ -140,7 +140,7 @@ int gc_manager_zip(gc_manager_t *manager){
 		
 		shadow_object->size = obj_sizeof(TYPE_GC_BROKEN);
 		shadow_object->type = TYPE_GC_BROKEN;
-		broken_value = (object_gc_broken_t*)gc_obj_value(shadow_object);
+		broken_value = (object_gc_broken_part_t*)object_part(shadow_object);
 		
 		
 		obj_move(iter, new_end);
