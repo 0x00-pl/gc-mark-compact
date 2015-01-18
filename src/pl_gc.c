@@ -27,8 +27,8 @@ int gc_manager_halt(gc_manager_t *manager){
 	return 0;
 }
 
-object_t *gc_manager_root(gc_manager_t *manager){
-	return &manager->object_pool[0];
+object_ref_part_t *gc_manager_root(gc_manager_t *manager){
+	return object_as_ref(&manager->object_pool[0]);
 }
 
 
@@ -91,7 +91,7 @@ object_t *gc_manager_object_array_alloc(gc_manager_t *manager, enum_object_type_
 	}
 	
 	new_object = gc_manager_object_pool_end(manager);
-	new_object->size = obj_sizeof(obj_type);
+	new_object->size = obj_array_sizeof(obj_type, size);
 	new_object->type = obj_type;
 	
 	manager->object_pool_size = gc_object_offset(manager->object_pool, gc_object_next(new_object));
@@ -118,9 +118,10 @@ int gc_manager_zip(gc_manager_t *manager){
 	object_t *shadow_object = NULL;
 	object_t *shadow_pool = NULL;
 	object_gc_broken_part_t *broken_value = NULL;
-	size_t object_pool_size= NULL;
+	size_t object_pool_size = 0;
 	size_t mark;
 	
+	object_pool_size = manager->object_pool_size;
 	mark = manager->object_pool[0].mark;
 	new_end = manager->object_pool;
 	shadow_pool = gc_manager_shadow_object_pool_alloc(manager);
@@ -166,5 +167,13 @@ int gc_gc(gc_manager_t *manager){
 }
 
 
+int gc_verbose_object_pool(gc_manager_t *manager){
+	object_t *iter = NULL;
+	size_t count = 0;
+	for(iter=manager->object_pool; iter<gc_manager_object_pool_end(manager); iter=gc_object_next(iter)){
+		printf("object%d type: %d, size: %d \n", count, iter->type, iter->size);
+		count++;
+	}
+}
 
 

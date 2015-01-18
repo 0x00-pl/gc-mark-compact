@@ -12,6 +12,7 @@ enum type_e{
 	TYPE_GC_BROKEN,
 	TYPE_EXTRA,
 	TYPE_REF,
+	TYPE_UNKNOW
 };
 typedef size_t enum_object_type_t;
 
@@ -25,40 +26,28 @@ typedef struct object_header_t_decl{
 typedef struct{
 	void *ptr;
 } object_raw_part_t;
-int object_raw_init(object_t *thiz, void* ptr);
-int object_raw_halt(object_t *thiz);
 
 typedef struct{
 	long int value;
 } object_int_part_t;
-int object_int_init(object_t *thiz, long int value);
-int object_int_halt(object_t *thiz);
 
 typedef struct{
 	double value;
 } object_float_part_t;
-int object_float_init(object_t *thiz, double value);
-int object_float_halt(object_t *thiz);
 
 typedef struct{
 	char *str;
 	size_t size;
 } object_str_part_t;
-int object_str_init(object_t *thiz, const char* text);
-int object_str_halt(object_t *thiz);
 
 typedef struct{
 	char *str;
 	size_t size;
 } object_symbol_part_t;
-int object_symbol_init(object_t *thiz, const char* name);
-int object_symbol_halt(object_t *thiz);
 
 typedef struct{
 	struct object_header_t_decl *ptr;
 } object_gc_broken_part_t;
-int object_gc_broken_init(object_t *thiz, void* ptr);
-int object_gc_broken_halt(object_t *thiz);
 
 typedef struct{
 	size_t extra_size; // sizeof(object_extra_t) + sizeof(extra_data)
@@ -68,14 +57,28 @@ typedef struct{
 typedef struct{
 	struct object_header_t_decl *ptr;
 } object_ref_part_t;
+
+
+// object init/halt
+int object_halt(object_t *obj);
+int object_raw_init(object_t *thiz, void* ptr);
+int object_raw_halt(object_t *thiz);
+int object_int_init(object_t *thiz, long int value);
+int object_int_halt(object_t *thiz);
+int object_float_init(object_t *thiz, double value);
+int object_float_halt(object_t *thiz);
+int object_str_init(object_t *thiz, const char* text);
+int object_str_halt(object_t *thiz);
+int object_symbol_init(object_t *thiz, const char* name);
+int object_symbol_halt(object_t *thiz);
+int object_gc_broken_init(object_t *thiz, void* ptr);
+int object_gc_broken_halt(object_t *thiz);
 int object_ref_init(object_t *thiz, void* ptr);
 int object_ref_halt(object_t *thiz);
 
 
-
-
-
-int object_halt(object_t *obj);
+// object copy
+int object_copy_init(object_t *src, object_t *dst);
 
 
 // object cast
@@ -94,10 +97,11 @@ object_ref_part_t       *object_as_ref(object_t *obj);
 
 
 // object size
-size_t obj_sizeof_value(enum_object_type_t obj_type);
-size_t obj_array_sizeof(enum_object_type_t obj_type, size_t n);
 size_t obj_sizeof(enum_object_type_t obj_type);
+size_t obj_sizeof_part(enum_object_type_t obj_type);
+size_t obj_array_sizeof(enum_object_type_t obj_type, size_t n);
 size_t obj_array_size(object_t *obj);
+void* obj_array_index(object_t *obj, size_t index);
 
 // object gc support
 int obj_mark(object_t *obj, int mark);

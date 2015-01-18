@@ -4,6 +4,8 @@
 #include <string.h>
 
 
+
+// object init/halt
 int object_raw_init(object_t *thiz, void* ptr){
 	object_as_raw(thiz)->ptr = ptr;
 	return 0;
@@ -100,6 +102,33 @@ int object_halt(object_t *obj){
 }
 
 
+// object copy init
+
+int object_copy_init(object_t *src, object_t *dst){
+	if(dst == NULL) {return -1;}
+	
+	switch(src->type){
+	case TYPE_RAW:
+	case TYPE_INT:
+	case TYPE_FLOAT:
+	case TYPE_STR:
+	case TYPE_SYMBOL:
+	case TYPE_GC_BROKEN:
+	case TYPE_REF:
+		memcpy(dst, src, src->size);
+		break;
+	case TYPE_EXTRA:
+		memcpy(dst, src, src->size);
+		// extra copy init
+		break;
+	default:
+		return -1;
+	}
+	
+	return 0;
+}
+
+
 // object cast
 
 int object_type_check(object_t *obj, enum_object_type_t type){
@@ -168,7 +197,7 @@ object_ref_part_t *object_as_ref(object_t *obj){
 
 // object size
 
-size_t obj_sizeof_value(enum_object_type_t obj_type){
+size_t obj_sizeof_part(enum_object_type_t obj_type){
 	switch(obj_type){
 	case TYPE_RAW:       return sizeof(object_raw_part_t);
 	case TYPE_INT:       return sizeof(object_int_part_t);
@@ -184,7 +213,7 @@ size_t obj_sizeof_value(enum_object_type_t obj_type){
 }
 
 size_t obj_array_sizeof(enum_object_type_t obj_type, size_t n){
-	return sizeof(object_header_t) + n * obj_sizeof_value(obj_type);
+	return sizeof(object_header_t) + n * obj_sizeof_part(obj_type);
 }
 
 size_t obj_sizeof(enum_object_type_t obj_type){
@@ -193,7 +222,14 @@ size_t obj_sizeof(enum_object_type_t obj_type){
 
 size_t obj_array_size(object_t *obj){
 	size_t value_size = obj->size - sizeof(object_header_t);
-	return value_size / obj_sizeof_value(obj->type);
+	return value_size / obj_sizeof_part(obj->type);
+}
+void* obj_array_index(object_t *obj, size_t index){
+	size_t obj_addr = (size_t)obj;
+	size_t ret_addr = obj_addr + sizeof(object_header_t) + index * obj_sizeof_part(obj->type);
+	if(ret_addr >= obj_addr + obj->size) {return NULL;}
+	
+	return (void*)ret_addr;
 }
 
 
@@ -220,7 +256,7 @@ int obj_mark(object_t *obj, int mark){
 		// extra-mark
 		break;
 	case TYPE_REF:
-		value_ref = (object_ref_part_t*)object_part(obj);
+		value_ref = object_as_ref(obj);
 		while(count --> 0){
 			obj_mark(value_ref[count].ptr, mark);
 		}
@@ -245,7 +281,7 @@ int obj_ptr_fix_gc_broken(object_t **pobj){
 	object_gc_broken_part_t *broken_value = NULL;
 	
 	if((*pobj)->type == TYPE_GC_BROKEN){
-		broken_value = (object_gc_broken_part_t*)object_part(*pobj);
+		broken_value = object_as_gc_broken(*pobj);
 		*pobj = broken_value->ptr;
 	}
 	return 0;
@@ -265,7 +301,7 @@ int obj_fix_gc_broken(object_t *obj){
 		// extra-fix_gc_broken
 		break;
 	case TYPE_REF:
-		value_ref = (object_ref_part_t*)object_part(obj);
+		value_ref = object_as_ref(obj);
 		while(count --> 0){
 			obj_ptr_fix_gc_broken(&(value_ref[count].ptr));
 		}
