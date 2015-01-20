@@ -16,6 +16,8 @@ enum type_e{
 };
 typedef size_t enum_object_type_t;
 
+// typename
+const char *object_typename(enum_object_type_t);
 
 typedef struct object_header_t_decl{
 	size_t size; // sizeof(object_t) + array_size * sizeof(value)
@@ -84,28 +86,43 @@ int object_copy_init(object_t *src, object_t *dst);
 // object cast
 int object_type_check(object_t *obj, enum_object_type_t type);
 void* object_part(object_t *obj);
-object_raw_part_t       *object_as_raw(object_t *obj);
-object_int_part_t       *object_as_int(object_t *obj);
-object_float_part_t     *object_as_float(object_t *obj);
-object_str_part_t       *object_as_str(object_t *obj);
-object_symbol_part_t    *object_as_symbol(object_t *obj);
-object_gc_broken_part_t *object_as_gc_broken(object_t *obj);
-object_extra_part_t     *object_as_extra(object_t *obj);
-object_ref_part_t       *object_as_ref(object_t *obj);
+object_raw_part_t       *object_as_raw       (object_t *obj);
+object_int_part_t       *object_as_int       (object_t *obj);
+object_float_part_t     *object_as_float     (object_t *obj);
+object_str_part_t       *object_as_str       (object_t *obj);
+object_symbol_part_t    *object_as_symbol    (object_t *obj);
+object_gc_broken_part_t *object_as_gc_broken (object_t *obj);
+object_extra_part_t     *object_as_extra     (object_t *obj);
+object_ref_part_t       *object_as_ref       (object_t *obj);
 
 
+// object tuple
+struct gc_manager_t_decl;
+object_t *object_tuple_alloc(struct gc_manager_t_decl *gcm, size_t size);
+int object_member_set_value(object_t *tuple, size_t index, object_t *value);
+void                    *object_member           (object_t *tuple, size_t offset);
+object_raw_part_t       *object_member_raw       (object_t *tuple, size_t offset);
+object_int_part_t       *object_member_int       (object_t *tuple, size_t offset);
+object_float_part_t     *object_member_float     (object_t *tuple, size_t offset);
+object_str_part_t       *object_member_str       (object_t *tuple, size_t offset);
+object_symbol_part_t    *object_member_symbol    (object_t *tuple, size_t offset);
+object_gc_broken_part_t *object_member_gc_broken (object_t *tuple, size_t offset);
+object_extra_part_t     *object_member_extra     (object_t *tuple, size_t offset);
+object_ref_part_t       *object_member_ref       (object_t *tuple, size_t offset);
 
 
 // object size
-size_t obj_sizeof(enum_object_type_t obj_type);
-size_t obj_sizeof_part(enum_object_type_t obj_type);
-size_t obj_array_sizeof(enum_object_type_t obj_type, size_t n);
-size_t obj_array_size(object_t *obj);
-void* obj_array_index(object_t *obj, size_t index);
+size_t object_sizeof(enum_object_type_t obj_type);
+size_t object_sizeof_part(enum_object_type_t obj_type);
+size_t object_array_sizeof(enum_object_type_t obj_type, size_t n);
+size_t object_array_size(object_t *obj);
+void* object_array_index(object_t *obj, size_t index);
+
 
 // object gc support
-int obj_mark(object_t *obj, int mark);
-int obj_ptr_rebase(object_t **pobj, object_t *old_pool, size_t old_pool_size, object_t *new_pool);
-int obj_rebase(object_t *obj, object_t *old_pool, size_t old_pool_size, object_t *new_pool);
-
+int object_mark(object_t *obj, int mark);
+int object_ptr_rebase(object_t **pobj, object_t *old_pool, size_t old_pool_size, object_t *new_pool);
+int object_rebase(object_t *obj, object_t *old_pool, size_t old_pool_size, object_t *new_pool);
+int object_move(object_t *obj_old, object_t *obj_new);
+int object_fix_gc_broken(object_t *obj);
 #endif

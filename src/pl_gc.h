@@ -8,7 +8,7 @@
 
 
 
-typedef struct{
+typedef struct gc_manager_t_decl{
 	object_t *object_pool;
 	size_t object_pool_size;
 	size_t object_pool_maxsize;

@@ -21,7 +21,7 @@ enum_object_type_t object_vector_data_type(object_t *vector);
 int object_vector_push(object_t *vector, gc_manager_t *gcm, object_t *value);
 int object_vector_top(object_t *vector, object_t *out_value);
 int object_vector_pop(object_t *vector, object_t *out_value);
-
+int object_vector_realloc(object_t *vector, gc_manager_t *gcm);
 
 
 #endif
