@@ -40,7 +40,7 @@ err_t err_out_of_range();
 
 // #define PL_NOT_NULL(exp) PL_ASSERT((exp)!=NULL, PL_PRINT_LOCATION, return ERR_NULL_PTR)
 
-#define PL_PRINT_LOCATION printf("at file: %s line: %s \n\n", __FILE__, __LINE__)
+#define PL_PRINT_LOCATION printf("at file: %s line: %d \n\n", __FILE__, __LINE__)
 
 #define PL_CHECK_RET_BEG int err = 0;
 
