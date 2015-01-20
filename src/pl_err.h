@@ -24,7 +24,7 @@ typedef int err_t;
 // 
 // err_t err_out_of_range();
 
-err_t err();
+err_t err(const char* msg);
 err_t err_null();
 err_t err_alloc();
 err_t err_typecheck();

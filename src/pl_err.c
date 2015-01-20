@@ -24,22 +24,23 @@
 //   return err(ERR_OUT_OF_RANGE, ERRLEVEL_ERROR, "out of range.");
 // }
 
-err_t err(){
+err_t err(const char* msg){
+  printf("error: %s\n", msg);
   return ERR_ANY;
 }
 err_t err_null(){
-  err();
+  err("null ptr");
   return ERR_NULL_PTR;
 }
 err_t err_alloc(){
-  err();
+  err("bad alloc");
   return ERR_ALLOC;
 }
 err_t err_typecheck(){
-  err();
+  err("type check fail");
   return ERR_TYPECHECK;
 }
 err_t err_out_of_range(){
-  err();
+  err("out of range");
   return ERR_OUT_OF_RANGE;
 }
