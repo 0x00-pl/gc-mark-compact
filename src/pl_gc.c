@@ -90,18 +90,18 @@ err_t *gc_manager_resize_object_pool(err_t **err, gc_manager_t *manager, size_t 
   return *err;
 }
 
-object_t *gc_manager_object_array_alloc(err_t **err, gc_manager_t *manager, enum_object_type_t obj_type, size_t size){
+object_t *gc_manager_object_array_alloc(err_t **err, gc_manager_t *manager, enum_object_type_t obj_type, size_t count){
   object_t *new_object= NULL;
   size_t required_size;
   
-  required_size = manager->object_pool_size + object_array_sizeof(err, obj_type, size);
+  required_size = manager->object_pool_size + object_array_sizeof(err, obj_type, count);
   
   if(required_size > manager->object_pool_maxsize){
     if(gc_manager_resize_object_pool(err, manager, required_size)<0) {return NULL;}
   }
   
   new_object = gc_manager_object_pool_end(err, manager);
-  new_object->size = object_array_sizeof(err, obj_type, size);
+  new_object->size = object_array_sizeof(err, obj_type, count);
   new_object->type = obj_type;
   
   manager->object_pool_size = gc_object_offset(manager->object_pool, gc_object_next(new_object));
@@ -112,10 +112,28 @@ object_t *gc_manager_object_alloc(err_t **err, gc_manager_t *manager, enum_objec
   return gc_manager_object_array_alloc(err, manager, obj_type, 1);
 }
 
+
+object_t *gc_manager_object_array_expand(err_t **err, gc_manager_t *gcm, object_t *obj, size_t new_count){
+  object_t *ret = NULL;
+  void *src_mem = NULL;
+  void *dst_mem = NULL;
+  size_t new_size = 0;
+  
+  new_size = object_array_sizeof(err, obj->type, new_count); PL_CHECK;
+  PL_ASSERT(obj->size <= new_size, err_out_of_range);
+  ret = gc_manager_object_array_alloc(err, gcm, obj->type, new_count); PL_CHECK;
+  src_mem = object_array_index(err, obj, 0); PL_CHECK;
+  dst_mem = object_array_index(err, ret, 0); PL_CHECK;
+  memcpy(dst_mem, src_mem, object_sizeof_part(err, obj->type)); PL_CHECK;
+  PL_FUNC_END
+  return ret;
+}
+
+
 err_t *gc_manager_mark(err_t **err, gc_manager_t *manager){
    
   size_t new_mark = manager->object_pool[0].mark + 1;
-  object_mark(err, &manager->object_pool[0], new_mark); PL_CHECK 
+  object_mark(err, &manager->object_pool[0], new_mark, UINT_MAX); PL_CHECK 
   PL_FUNC_END
   return *err;
 }

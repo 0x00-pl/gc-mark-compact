@@ -10,17 +10,17 @@
 // typename
 const char *object_typename(enum_object_type_t type){
   switch(type){
-  case TYPE_RAW       : return "TYPE_RAW      ";
-  case TYPE_INT       : return "TYPE_INT      ";
-  case TYPE_FLOAT     : return "TYPE_FLOAT    ";
-  case TYPE_STR       : return "TYPE_STR      ";
-  case TYPE_SYMBOL    : return "TYPE_SYMBOL   ";
+  case TYPE_RAW       : return "TYPE_RAW";
+  case TYPE_INT       : return "TYPE_INT";
+  case TYPE_FLOAT     : return "TYPE_FLOAT";
+  case TYPE_STR       : return "TYPE_STR";
+  case TYPE_SYMBOL    : return "TYPE_SYMBOL";
   case TYPE_GC_BROKEN : return "TYPE_GC_BROKEN";
-  case TYPE_EXTRA     : return "TYPE_EXTRA    ";
-  case TYPE_REF       : return "TYPE_REF      ";
-  default             : return "TYPE_UNKNOW   ";
+  case TYPE_VECTOR    : return "TYPE_VECTOR";
+  case TYPE_REF       : return "TYPE_REF";
+  default             : return "TYPE_UNKNOW";
   }
-  return "TYPE_UNKNOW   ";
+  return "TYPE_UNKNOW";
 }
 
 // object init/halt
@@ -35,7 +35,8 @@ err_t *object##_tname##_init args{ \
   return *err; \
 }
 
-TMP_OBJECT_INIT(_raw, TYPE_RAW, (err_t **err, object_t *thiz, void *ptr),
+TMP_OBJECT_INIT(_raw, TYPE_RAW, (err_t **err, object_t *thiz, void *ptr, int auto_free),
+                _part->auto_free = auto_free;
                 _part->ptr = ptr;
                )
 
@@ -54,15 +55,17 @@ TMP_OBJECT_INIT(_str, TYPE_STR, (err_t **err, object_t *thiz, const char* text),
                 _part->str[_part->size] = '\0';
                )
 
-TMP_OBJECT_INIT(_symbol, TYPE_SYMBOL, (err_t **err, object_t *thiz, const char* name),
-                _part->size = strlen(name);
-                _part->str = malloc(_part->size + 1);
-                memcpy(_part->str, name, _part->size);
-                _part->str[_part->size] = '\0';
+TMP_OBJECT_INIT(_symbol, TYPE_SYMBOL, (err_t **err, object_t *thiz, object_t *name),
+                _part->name = name;
                )
 
 TMP_OBJECT_INIT(_gc_broken, TYPE_GC_BROKEN, (err_t **err, object_t *thiz, void *ptr),
                 _part->ptr = (object_t*)ptr;
+               )
+
+TMP_OBJECT_INIT(_vector, TYPE_VECTOR, (err_t **err, object_t *thiz),
+                _part->count = 0;
+                _part->pdata = NULL;
                )
 
 TMP_OBJECT_INIT(_ref, TYPE_REF, (err_t **err, object_t *thiz, void *ptr),
@@ -72,28 +75,21 @@ TMP_OBJECT_INIT(_ref, TYPE_REF, (err_t **err, object_t *thiz, void *ptr),
 #undef TMP_OBJECT_INIT
 
 err_t *object_raw_halt(err_t **err, object_t *thiz){
-  if(object_as_raw(err, thiz)!=NULL) {free(object_as_raw(err, thiz)->ptr);}
-  return 0;
+  object_raw_part_t *_part = object_as_raw(err, thiz); PL_CHECK;
+  if(_part->auto_free && _part->ptr!=NULL){
+    free(_part->ptr);
+  }
+  PL_FUNC_END
+  return *err;
 }
-err_t *object_int_halt(err_t **err, object_t *thiz){
-  return 0;
-}
-err_t *object_float_halt(err_t **err, object_t *thiz){
-  return 0;
-}
+
 err_t *object_str_halt(err_t **err, object_t *thiz){
-  if(object_as_str(err, thiz)!=NULL) {free(object_as_str(err, thiz)->str);}
-  return 0;
-}
-err_t *object_symbol_halt(err_t **err, object_t *thiz){
-  if(object_as_symbol(err, thiz)!=NULL) {free(object_as_symbol(err, thiz)->str);}
-  return 0;
-}
-err_t *object_gc_broken_halt(err_t **err, object_t *thiz){
-  return 0;
-}
-err_t *object_ref_halt(err_t **err, object_t *thiz){
-  return 0;
+  object_str_part_t *_part = object_as_str(err, thiz); PL_CHECK;
+  if(_part->str!=NULL){
+    free(_part->str);
+  }
+  PL_FUNC_END
+  return *err;
 }
 
 err_t *object_halt(err_t **err, object_t *obj){
@@ -102,30 +98,90 @@ err_t *object_halt(err_t **err, object_t *obj){
   case TYPE_RAW:
     object_raw_halt(err, obj); PL_CHECK;
     break;
-  case TYPE_INT:
-    object_int_halt(err, obj); PL_CHECK;
-    break;
-  case TYPE_FLOAT:
-    object_float_halt(err, obj); PL_CHECK;
-    break;
   case TYPE_STR:
     object_str_halt(err, obj); PL_CHECK;
     break;
+  case TYPE_INT:
+  case TYPE_FLOAT:
   case TYPE_SYMBOL:
-    object_symbol_halt(err, obj); PL_CHECK;
-    break;
   case TYPE_GC_BROKEN:
-    object_gc_broken_halt(err, obj); PL_CHECK;
-    break;
-  case TYPE_EXTRA:
-    // extra halt
-    break;
   case TYPE_REF:
-    object_ref_halt(err, obj); PL_CHECK;
     break;
   default:
     PL_ASSERT(0, err_typecheck);
     break;
+  }
+  PL_FUNC_END
+  return *err;
+}
+
+err_t *object_raw_part_init(err_t **err, object_raw_part_t *part, void *ptr, int auto_free){
+  part->ptr = ptr;
+  part->auto_free = auto_free;
+  return *err;
+}
+err_t *object_int_part_init(err_t **err, object_int_part_t *part, long int value){
+  part->value = value;
+  return *err;
+}
+err_t *object_float_part_init(err_t **err, object_float_part_t *part, double value){
+  part->value = value;
+  return *err;
+}
+err_t *object_str_part_init(err_t **err, object_str_part_t *part, const char* text){
+  char *text_copy = NULL;
+  part->size = strlen(text);
+  text_copy = malloc(part->size+1);
+  strncpy(text_copy, text, part->size);
+  text_copy[part->size] = '\0';
+  part->str = text_copy;
+  return *err;
+}
+err_t *object_symbol_part_init(err_t **err, object_symbol_part_t *part, object_t *name){
+  part->name = name;
+  return *err;
+}
+err_t *object_gc_broken_part_init(err_t **err, object_gc_broken_part_t *part, object_t *ptr){
+  part->ptr = ptr;
+  return *err;
+}
+err_t *object_vector_part_init(err_t **err, object_vector_part_t *part){
+  part->count = 0;
+  part->pdata = NULL;
+  return *err;
+}
+err_t *object_ref_part_init(err_t **err, object_ref_part_t *part, object_t *ptr){
+  part->ptr = ptr;
+  return *err;
+}
+err_t *object_part_halt(err_t **err, void *part, enum_object_type_t type){
+  object_raw_part_t       *raw_part       = (object_raw_part_t       *)part;
+//   object_int_part_t       *int_part       = (object_int_part_t       *)part;
+//   object_float_part_t     *float_part     = (object_float_part_t     *)part;
+  object_str_part_t       *str_part       = (object_str_part_t       *)part;
+//   object_symbol_part_t    *symbol_part    = (object_symbol_part_t    *)part;
+//   object_gc_broken_part_t *gc_broken_part = (object_gc_broken_part_t *)part;
+//   object_vector_part_t    *vector_part    = (object_vector_part_t    *)part;
+//   object_ref_part_t       *ref_part       = (object_ref_part_t       *)part;
+  
+  switch(type){
+  case TYPE_RAW:
+    if(raw_part->auto_free){
+      free(raw_part->ptr);
+    }
+    break;
+  case TYPE_STR:
+    free(str_part->str);
+    break;
+  case TYPE_INT:
+  case TYPE_FLOAT:
+  case TYPE_SYMBOL:
+  case TYPE_GC_BROKEN:
+  case TYPE_REF:
+  case TYPE_VECTOR:
+    break;
+  default:
+    PL_ASSERT(0, err_typecheck);
   }
   PL_FUNC_END
   return *err;
@@ -146,11 +202,8 @@ err_t *object_copy_init(err_t **err, object_t *src, object_t *dst){
   case TYPE_SYMBOL:
   case TYPE_GC_BROKEN:
   case TYPE_REF:
+  case TYPE_VECTOR:
     memcpy(dst, src, src->size);
-    break;
-  case TYPE_EXTRA:
-    memcpy(dst, src, src->size);
-    // extra copy init
     break;
   default:
     PL_ASSERT(0, err_typecheck);
@@ -187,7 +240,7 @@ TMP_OBJECT_AS_DECL(_float,     TYPE_FLOAT    )
 TMP_OBJECT_AS_DECL(_str,       TYPE_STR      )
 TMP_OBJECT_AS_DECL(_symbol,    TYPE_SYMBOL   )
 TMP_OBJECT_AS_DECL(_gc_broken, TYPE_GC_BROKEN)
-TMP_OBJECT_AS_DECL(_extra,     TYPE_EXTRA    )
+TMP_OBJECT_AS_DECL(_vector,    TYPE_VECTOR   )
 TMP_OBJECT_AS_DECL(_ref,       TYPE_REF      )
 
 #undef TMP_OBJECT_AS_DECL
@@ -200,7 +253,7 @@ object_t *object_tuple_alloc(err_t **err, gc_manager_t *gcm, size_t size){
   return ret;
 }
 err_t *object_member_set_value(err_t **err, object_t *tuple, size_t offset, object_t *value){
-  PL_ASSERT(offset<object_array_size(err, tuple), err_out_of_range);
+  PL_ASSERT(offset<object_array_count(err, tuple), err_out_of_range);
   PL_ASSERT_NOT_NULL(object_as_ref(err, tuple));
   object_as_ref(err, tuple)[offset].ptr = value;
   PL_FUNC_END
@@ -208,7 +261,7 @@ err_t *object_member_set_value(err_t **err, object_t *tuple, size_t offset, obje
 }
 void *object_member(err_t **err, object_t *tuple, size_t offset){
   object_as_ref(err, tuple); PL_CHECK;
-  PL_ASSERT(offset<object_array_size(err, tuple), err_out_of_range);
+  PL_ASSERT(offset<object_array_count(err, tuple), err_out_of_range);
   PL_ASSERT_NOT_NULL(object_as_ref(err, tuple)[offset].ptr);
   PL_FUNC_END_EX(,return NULL);
   return object_part(err, object_as_ref(err, tuple)[offset].ptr);
@@ -228,7 +281,7 @@ TMP_OBJECT_MEMBER_DECL(_float,     TYPE_FLOAT    )
 TMP_OBJECT_MEMBER_DECL(_str,       TYPE_STR      )
 TMP_OBJECT_MEMBER_DECL(_symbol,    TYPE_SYMBOL   )
 TMP_OBJECT_MEMBER_DECL(_gc_broken, TYPE_GC_BROKEN)
-TMP_OBJECT_MEMBER_DECL(_extra,     TYPE_EXTRA    )
+TMP_OBJECT_MEMBER_DECL(_vector,    TYPE_VECTOR   )
 TMP_OBJECT_MEMBER_DECL(_ref,       TYPE_REF      )
 
 #undef TMP_OBJECT_MEMBER_DECL
@@ -243,7 +296,7 @@ size_t object_sizeof_part(err_t **err, enum_object_type_t obj_type){
   case TYPE_STR:       return sizeof(object_str_part_t);
   case TYPE_SYMBOL:    return sizeof(object_symbol_part_t);
   case TYPE_GC_BROKEN: return sizeof(object_gc_broken_part_t);
-  case TYPE_EXTRA:     return sizeof(object_extra_part_t);
+  case TYPE_VECTOR:    return sizeof(object_vector_part_t);
   case TYPE_REF:       return sizeof(object_ref_part_t);
   default:             break;
   }
@@ -260,7 +313,7 @@ size_t object_sizeof(err_t **err, enum_object_type_t obj_type){
   return object_array_sizeof(err, obj_type, 1);
 }
 
-size_t object_array_size(err_t **err, object_t *obj){
+size_t object_array_count(err_t **err, object_t *obj){
   PL_ASSERT_EX(obj!=NULL, err_null(PL_ERR_DEFAULT_ARGS), return 0);
   size_t value_size = obj->size - sizeof(object_header_t);
   return value_size / object_sizeof_part(err, obj->type);
@@ -275,37 +328,126 @@ void* object_array_index(err_t **err, object_t *obj, size_t index){
 }
 
 
+
+// object vecter
+err_t *object_vector_push(err_t **err, object_vector_part_t *vector_part, struct gc_manager_t_decl *gcm, object_t *item){
+  object_t *new_data = NULL;
+  void *src = NULL;
+  void *dst = NULL;
+  size_t max_count;
+  
+  // able to chage type with size == 0
+  if(vector_part->count == 0){
+    vector_part->pdata = gc_manager_object_array_alloc(err, gcm, item->type, 1); PL_CHECK;
+  }
+  
+  // type check
+  PL_ASSERT(vector_part->pdata->type == item->type, err_typecheck);
+  
+  max_count = object_array_count(err, vector_part->pdata); PL_CHECK;
+  // extend pdata
+  if(vector_part->count+1 >= max_count){
+    new_data = gc_manager_object_array_expand(err, gcm, vector_part->pdata, max_count * 2); PL_CHECK;
+    vector_part->pdata = new_data;
+  }
+  
+  src = object_array_index(err, item, 0); PL_CHECK;
+  dst = object_array_index(err, vector_part->pdata, vector_part->count); PL_CHECK;
+  object_part_move(err, src, dst, vector_part->pdata->type); PL_CHECK;
+  
+  vector_part->count++;
+  
+  PL_FUNC_END
+  return *err;
+}
+err_t *object_vector_pop(err_t **err, object_vector_part_t *vector_part, object_t *dest){
+  object_t *new_data = NULL;
+  void *src_part = NULL;
+  void *dst_part = NULL;
+  size_t max_count;
+  
+  
+  vector_part->count--;  
+
+  src_part = object_array_index(err, vector_part->pdata, vector_part->count); PL_CHECK;
+  if(dest!=NULL){
+    // type check
+    PL_ASSERT(vector_part->pdata->type == dest->type, err_typecheck);
+    dst_part = object_array_index(err, dest, 0); PL_CHECK;
+    object_part_move(err, src_part, dst_part, vector_part->pdata->type); PL_CHECK;
+  }
+  
+  object_part_halt(err, src_part, vector_part->pdata->type); PL_CHECK;
+  
+  PL_FUNC_END
+  return *err;
+}
+
+void *object_vector_top(err_t **err, object_vector_part_t *vector_part, object_t *dest){
+  object_t *new_data = NULL;
+  void *src_part = NULL;
+  void *dst_part = NULL;
+  size_t max_count;
+  
+  // type check
+  PL_ASSERT(vector_part->pdata->type == dest->type, err_typecheck); 
+
+  src_part = object_array_index(err, vector_part->pdata, vector_part->count-1); PL_CHECK;
+  if(dest!=NULL){
+    dst_part = object_array_index(err, dest, 0); PL_CHECK;
+    object_part_move(err, src_part, dst_part, vector_part->pdata->type); PL_CHECK;
+  }
+ 
+  PL_FUNC_END
+  return src_part;
+}
+
+
+
 // object gc support
 
-err_t *object_mark(err_t **err, object_t *obj, int mark){
-  object_ref_part_t *value_ref = NULL;
+err_t *object_mark(err_t **err, object_t *obj, int mark, size_t limit){
+  object_symbol_part_t *symbol_part = NULL;
+  object_vector_part_t *vector_part = NULL;
+  object_ref_part_t *ref_part = NULL;
   size_t count;
   
-  if(obj==NULL) {return 0;}
-  if(obj->mark == mark) {return 0;}
+  if(limit == 0) {return *err;}
+  if(obj==NULL) {return *err;}
+  if(obj->mark == mark) {return *err;}
   
   obj->mark = mark;
   
-  count = object_array_size(err, obj);
-  PL_ASSERT(count>0, err_out_of_range);
+  count = object_array_count(err, obj); PL_CHECK
+  if(limit<count) {count = limit;}
   
   switch(obj->type){
   case TYPE_RAW:
   case TYPE_INT:
   case TYPE_FLOAT:
   case TYPE_STR:
+    break;
   case TYPE_SYMBOL:
-    break;
-  case TYPE_EXTRA:
-    // extra-mark
-    break;
-  case TYPE_REF:
-    value_ref = object_as_ref(err, obj);
-    PL_ASSERT_NOT_NULL(value_ref);
-    while(count --> 0){
-      object_mark(err, value_ref[count].ptr, mark); PL_CHECK;
+    symbol_part = object_as_symbol(err, obj); PL_CHECK;
+    while(count-->0){
+      object_mark(err, symbol_part[count].name, mark, UINT_MAX); PL_CHECK;
     }
     break;
+    
+  case TYPE_REF:
+    ref_part = object_as_ref(err, obj); PL_CHECK;
+    while(count-->0){
+      object_mark(err, ref_part[count].ptr, mark, UINT_MAX); PL_CHECK;
+    }
+    break;
+    
+  case TYPE_VECTOR:
+    vector_part = object_as_vector(err, obj); PL_CHECK;
+    while(count-->0){
+      object_mark(err, vector_part[count].pdata, mark, vector_part[count].count); PL_CHECK;
+    }
+    break;
+    
   default:
     PL_ASSERT(0, err_typecheck);
     break;
@@ -320,6 +462,16 @@ err_t *object_move(err_t **err, object_t *obj_old, object_t *obj_new){
   PL_ASSERT_NOT_NULL(obj_new);
   if(obj_old != obj_new){
     memmove(obj_new, obj_old, obj_old->size);
+  }
+  PL_FUNC_END
+  return *err;
+}
+err_t *object_part_move(err_t **err, void *part_src, void *part_dst, enum_object_type_t type){
+  size_t copy_size = object_sizeof_part(err, type); PL_CHECK;
+  PL_ASSERT_NOT_NULL(part_src);
+  PL_ASSERT_NOT_NULL(part_dst);
+  if(part_src != part_dst){
+    memmove(part_dst, part_src, copy_size);
   }
   PL_FUNC_END
   return *err;
@@ -341,29 +493,38 @@ err_t *obj_ptr_fix_gc_broken(err_t **err, object_t **pobj){
   return *err;
 }
 err_t *object_fix_gc_broken(err_t **err, object_t *obj){
-   
-  PL_ASSERT_NOT_NULL(obj);
-  object_ref_part_t *value_ref = NULL;
-  size_t count = object_array_size(err, obj);
-  PL_ASSERT(count>0, err_out_of_range);
+  object_symbol_part_t *symbol_part = NULL;
+  object_vector_part_t *vector_part = NULL;
+  object_ref_part_t *ref_part = NULL;
+  size_t count;
   
+  PL_ASSERT_NOT_NULL(obj);
+  count = object_array_count(err, obj); PL_CHECK;
+  if(count == 0) {return *err;}
+
   switch(obj->type){
+  case TYPE_SYMBOL:
+    symbol_part = object_as_symbol(err, obj); PL_CHECK;
+    while(count-->0){
+      obj_ptr_fix_gc_broken(err, &(symbol_part[count].name)); PL_CHECK;
+    }
+    break;
+  case TYPE_REF:    
+    ref_part = object_as_ref(err, obj); PL_CHECK;
+    while(count-->0){
+      obj_ptr_fix_gc_broken(err, &(ref_part[count].ptr)); PL_CHECK;
+    }
+    break;
+  case TYPE_VECTOR:
+    vector_part = object_as_vector(err, obj); PL_CHECK;
+    while(count-->0){
+      obj_ptr_fix_gc_broken(err, &(vector_part[count].pdata)); PL_CHECK;
+    }
+    break;
   case TYPE_RAW:
   case TYPE_INT:
   case TYPE_FLOAT:
   case TYPE_STR:
-  case TYPE_SYMBOL:
-    break;
-  case TYPE_EXTRA:
-    // extra-fix_gc_broken
-    break;
-  case TYPE_REF:
-    value_ref = object_as_ref(err, obj);
-    PL_ASSERT_NOT_NULL(value_ref);
-    while(count --> 0){
-      obj_ptr_fix_gc_broken(err, &(value_ref[count].ptr)); PL_CHECK;
-    }
-    break;
   default:
     break;
   }
@@ -394,29 +555,43 @@ err_t *object_ptr_rebase(err_t **err, object_t **pobj, object_t *old_pool, size_
 }
 
 err_t *object_rebase(err_t **err, object_t *obj, object_t *old_pool, size_t old_pool_size, object_t *new_pool){
-   
+  object_symbol_part_t *symbol_part = NULL;
+  object_vector_part_t *vector_part = NULL;
+  object_ref_part_t *ref_part = NULL;
+  size_t count;
+  
   PL_ASSERT_NOT_NULL(obj);
-  size_t count = object_array_size(err, obj);
-  object_ref_part_t *value_ref = NULL;
+  count = object_array_count(err, obj); PL_CHECK;
+  if(count == 0) {return *err;}
   
   switch(obj->type){
   case TYPE_RAW:
   case TYPE_INT:
   case TYPE_FLOAT:
   case TYPE_STR:
+    break;
   case TYPE_SYMBOL:
-    break;
-  case TYPE_EXTRA:
-    // extra-rebase
-    break;
-  case TYPE_REF:
-    value_ref = (object_ref_part_t*)object_part(err, obj);
-    PL_ASSERT_NOT_NULL(value_ref);
+    symbol_part = object_as_symbol(err, obj); PL_CHECK;
     while(count --> 0){
-      object_ptr_rebase(err, &(value_ref[count].ptr), old_pool, old_pool_size, new_pool); PL_CHECK 
+      object_ptr_rebase(err, &(symbol_part[count].name), old_pool, old_pool_size, new_pool); PL_CHECK 
+    }
+    break;
+    
+  case TYPE_REF:
+    ref_part = object_as_ref(err, obj); PL_CHECK;
+    while(count --> 0){
+      object_ptr_rebase(err, &(ref_part[count].ptr), old_pool, old_pool_size, new_pool); PL_CHECK 
+    }
+    break;
+    
+  case TYPE_VECTOR:
+    vector_part = object_as_vector(err, obj); PL_CHECK;
+    while(count --> 0){
+      object_ptr_rebase(err, &(vector_part[count].pdata), old_pool, old_pool_size, new_pool); PL_CHECK 
     }
     break;
   default:
+    PL_ASSERT(0, err_typecheck);
     break;
   }
   

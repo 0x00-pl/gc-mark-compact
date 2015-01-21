@@ -2,7 +2,7 @@
 #include <stdlib.h>
 
 #include "src/pl_gc.h"
-#include "src/pl_vector.h"
+//#include "src/pl_vector.h"
 /* run this program using the console pauser or add your own getch, system("pause") or input loop */
 
 int test_err(void*ret){
@@ -64,16 +64,17 @@ int main(int argc, char *argv[]) {
   i1 = gc_manager_object_alloc(err, gc_manager, TYPE_INT);
   object_int_init(err, i1, 1);
   
-  object_vector_t *vec1 = object_vector_alloc(err, gc_manager); PL_CHECK;
-  object_vector_push(err, vec1, gc_manager, i1);
-  object_vector_top(err, vec1, i1);
-  object_vector_push(err, vec1, gc_manager, i1);
-  object_vector_pop(err, vec1, NULL);
-  object_vector_push(err, vec1, gc_manager, i1);
-  object_vector_pop(err, vec1, NULL);
-  object_vector_pop(err, vec1, NULL);
-  object_vector_pop(err, vec1, NULL);
-  object_vector_realloc(err, vec1, gc_manager);
+  object_t *vec1 = gc_manager_object_alloc(err, gc_manager, TYPE_VECTOR); PL_CHECK;
+  object_vector_part_t *vec1_part = object_as_vector(err, vec1); PL_CHECK;
+  object_vector_part_init(err, vec1_part); PL_CHECK;
+  object_vector_push(err, vec1_part, gc_manager, i1);
+  object_vector_top(err, vec1_part, i1);
+  object_vector_push(err, vec1_part, gc_manager, i1);
+  object_vector_pop(err, vec1_part, NULL);
+  object_vector_push(err, vec1_part, gc_manager, i1);
+  object_vector_pop(err, vec1_part, NULL);
+  object_vector_pop(err, vec1_part, NULL);
+  object_vector_pop(err, vec1_part, NULL);
   
   gc_manager_root(err, gc_manager)->ptr = vec1;
   
