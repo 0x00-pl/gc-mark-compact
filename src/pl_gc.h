@@ -9,9 +9,9 @@
 
 
 typedef struct gc_manager_t_decl{
-	object_t *object_pool;
-	size_t object_pool_size;
-	size_t object_pool_maxsize;
+  object_t *object_pool;
+  size_t object_pool_size;
+  size_t object_pool_maxsize;
 } gc_manager_t;
 err_t *gc_manager_init(err_t **err, gc_manager_t *manager);
 err_t *gc_manager_halt(err_t **err, gc_manager_t *manager);

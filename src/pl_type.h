@@ -6,15 +6,15 @@
 #include "pl_err.h"
 
 enum type_e{
-	TYPE_RAW,
-	TYPE_INT,
-	TYPE_FLOAT,
-	TYPE_STR,
-	TYPE_SYMBOL,
-	TYPE_GC_BROKEN,
-	TYPE_REF,
+  TYPE_RAW,
+  TYPE_INT,
+  TYPE_FLOAT,
+  TYPE_STR,
+  TYPE_SYMBOL,
+  TYPE_GC_BROKEN,
+  TYPE_REF,
         TYPE_VECTOR,
-	TYPE_UNKNOW
+  TYPE_UNKNOW
 };
 typedef size_t enum_object_type_t;
 
@@ -22,9 +22,9 @@ typedef size_t enum_object_type_t;
 const char *object_typename(enum_object_type_t);
 
 typedef struct object_header_t_decl{
-	size_t size; // sizeof(object_t) + array_size * sizeof(value)
-	size_t type;
-	size_t mark;
+  size_t size; // sizeof(object_t) + array_size * sizeof(value)
+  size_t type;
+  size_t mark;
 } object_header_t, object_t;
 
 typedef struct{
@@ -33,16 +33,16 @@ typedef struct{
 } object_raw_part_t;
 
 typedef struct{
-	long int value;
+  long int value;
 } object_int_part_t;
 
 typedef struct{
-	double value;
+  double value;
 } object_float_part_t;
 
 typedef struct{
-	char *str;
-	size_t size;
+  char *str;
+  size_t size;
 } object_str_part_t;
 
 typedef struct{
@@ -50,16 +50,16 @@ typedef struct{
 } object_symbol_part_t;
 
 typedef struct{
-	struct object_header_t_decl *ptr;
+  struct object_header_t_decl *ptr;
 } object_gc_broken_part_t;
 
 typedef struct{
-	size_t count; // data count
-	object_t *pdata;
+  size_t count; // data count
+  object_t *pdata;
 } object_vector_part_t;
 
 typedef struct{
-	struct object_header_t_decl *ptr;
+  struct object_header_t_decl *ptr;
 } object_ref_part_t;
 
 
