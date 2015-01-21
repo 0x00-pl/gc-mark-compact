@@ -2,6 +2,7 @@
 #define _PL_TYPE_H_
 
 #include <stddef.h>
+#include "pl_err.h"
 
 enum type_e{
 	TYPE_RAW,
@@ -62,67 +63,67 @@ typedef struct{
 
 
 // object init/halt
-int object_halt(object_t *obj);
-int object_raw_init(object_t *thiz, void* ptr);
-int object_raw_halt(object_t *thiz);
-int object_int_init(object_t *thiz, long int value);
-int object_int_halt(object_t *thiz);
-int object_float_init(object_t *thiz, double value);
-int object_float_halt(object_t *thiz);
-int object_str_init(object_t *thiz, const char* text);
-int object_str_halt(object_t *thiz);
-int object_symbol_init(object_t *thiz, const char* name);
-int object_symbol_halt(object_t *thiz);
-int object_gc_broken_init(object_t *thiz, void* ptr);
-int object_gc_broken_halt(object_t *thiz);
-int object_ref_init(object_t *thiz, void* ptr);
-int object_ref_halt(object_t *thiz);
+err_t *object_halt(err_t **err, object_t *obj);
+err_t *object_raw_init(err_t **err, object_t *thiz, void* ptr);
+err_t *object_raw_halt(err_t **err, object_t *thiz);
+err_t *object_int_init(err_t **err, object_t *thiz, long int value);
+err_t *object_int_halt(err_t **err, object_t *thiz);
+err_t *object_float_init(err_t **err, object_t *thiz, double value);
+err_t *object_float_halt(err_t **err, object_t *thiz);
+err_t *object_str_init(err_t **err, object_t *thiz, const char* text);
+err_t *object_str_halt(err_t **err, object_t *thiz);
+err_t *object_symbol_init(err_t **err, object_t *thiz, const char* name);
+err_t *object_symbol_halt(err_t **err, object_t *thiz);
+err_t *object_gc_broken_init(err_t **err, object_t *thiz, void* ptr);
+err_t *object_gc_broken_halt(err_t **err, object_t *thiz);
+err_t *object_ref_init(err_t **err, object_t *thiz, void* ptr);
+err_t *object_ref_halt(err_t **err, object_t *thiz);
 
 
 // object copy
-int object_copy_init(object_t *src, object_t *dst);
+err_t *object_copy_init(err_t **err, object_t *src, object_t *dst);
 
 
 // object cast
-int object_type_check(object_t *obj, enum_object_type_t type);
-void* object_part(object_t *obj);
-object_raw_part_t       *object_as_raw       (object_t *obj);
-object_int_part_t       *object_as_int       (object_t *obj);
-object_float_part_t     *object_as_float     (object_t *obj);
-object_str_part_t       *object_as_str       (object_t *obj);
-object_symbol_part_t    *object_as_symbol    (object_t *obj);
-object_gc_broken_part_t *object_as_gc_broken (object_t *obj);
-object_extra_part_t     *object_as_extra     (object_t *obj);
-object_ref_part_t       *object_as_ref       (object_t *obj);
+err_t *object_type_check(err_t **err, object_t *obj, enum_object_type_t type);
+void* object_part(err_t **err, object_t *obj);
+object_raw_part_t       *object_as_raw       (err_t **err, object_t *obj);
+object_int_part_t       *object_as_int       (err_t **err, object_t *obj);
+object_float_part_t     *object_as_float     (err_t **err, object_t *obj);
+object_str_part_t       *object_as_str       (err_t **err, object_t *obj);
+object_symbol_part_t    *object_as_symbol    (err_t **err, object_t *obj);
+object_gc_broken_part_t *object_as_gc_broken (err_t **err, object_t *obj);
+object_extra_part_t     *object_as_extra     (err_t **err, object_t *obj);
+object_ref_part_t       *object_as_ref       (err_t **err, object_t *obj);
 
 
 // object tuple
 struct gc_manager_t_decl;
-object_t *object_tuple_alloc(struct gc_manager_t_decl *gcm, size_t size);
-int object_member_set_value(object_t *tuple, size_t index, object_t *value);
-void                    *object_member           (object_t *tuple, size_t offset);
-object_raw_part_t       *object_member_raw       (object_t *tuple, size_t offset);
-object_int_part_t       *object_member_int       (object_t *tuple, size_t offset);
-object_float_part_t     *object_member_float     (object_t *tuple, size_t offset);
-object_str_part_t       *object_member_str       (object_t *tuple, size_t offset);
-object_symbol_part_t    *object_member_symbol    (object_t *tuple, size_t offset);
-object_gc_broken_part_t *object_member_gc_broken (object_t *tuple, size_t offset);
-object_extra_part_t     *object_member_extra     (object_t *tuple, size_t offset);
-object_ref_part_t       *object_member_ref       (object_t *tuple, size_t offset);
+object_t *object_tuple_alloc(err_t **err, struct gc_manager_t_decl *gcm, size_t size);
+err_t *object_member_set_value(err_t **err, object_t *tuple, size_t index, object_t *value);
+void                    *object_member           (err_t **err, object_t *tuple, size_t offset);
+object_raw_part_t       *object_member_raw       (err_t **err, object_t *tuple, size_t offset);
+object_int_part_t       *object_member_int       (err_t **err, object_t *tuple, size_t offset);
+object_float_part_t     *object_member_float     (err_t **err, object_t *tuple, size_t offset);
+object_str_part_t       *object_member_str       (err_t **err, object_t *tuple, size_t offset);
+object_symbol_part_t    *object_member_symbol    (err_t **err, object_t *tuple, size_t offset);
+object_gc_broken_part_t *object_member_gc_broken (err_t **err, object_t *tuple, size_t offset);
+object_extra_part_t     *object_member_extra     (err_t **err, object_t *tuple, size_t offset);
+object_ref_part_t       *object_member_ref       (err_t **err, object_t *tuple, size_t offset);
 
 
 // object size
-size_t object_sizeof(enum_object_type_t obj_type);
-size_t object_sizeof_part(enum_object_type_t obj_type);
-size_t object_array_sizeof(enum_object_type_t obj_type, size_t n);
-size_t object_array_size(object_t *obj);
-void* object_array_index(object_t *obj, size_t index);
+size_t object_sizeof(err_t **err, enum_object_type_t obj_type);
+size_t object_sizeof_part(err_t **err, enum_object_type_t obj_type);
+size_t object_array_sizeof(err_t **err, enum_object_type_t obj_type, size_t n);
+size_t object_array_size(err_t **err, object_t *obj);
+void* object_array_index(err_t **err, object_t *obj, size_t index);
 
 
 // object gc support
-int object_mark(object_t *obj, int mark);
-int object_ptr_rebase(object_t **pobj, object_t *old_pool, size_t old_pool_size, object_t *new_pool);
-int object_rebase(object_t *obj, object_t *old_pool, size_t old_pool_size, object_t *new_pool);
-int object_move(object_t *obj_old, object_t *obj_new);
-int object_fix_gc_broken(object_t *obj);
+err_t *object_mark(err_t **err, object_t *obj, int mark);
+err_t *object_ptr_rebase(err_t **err, object_t **pobj, object_t *old_pool, size_t old_pool_size, object_t *new_pool);
+err_t *object_rebase(err_t **err, object_t *obj, object_t *old_pool, size_t old_pool_size, object_t *new_pool);
+err_t *object_move(err_t **err, object_t *obj_old, object_t *obj_new);
+err_t *object_fix_gc_broken(err_t **err, object_t *obj);
 #endif

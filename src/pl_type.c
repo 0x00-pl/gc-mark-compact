@@ -25,116 +25,116 @@ const char *object_typename(enum_object_type_t type){
 
 // object init/halt
 #define TMP_OBJECT_INIT(_tname, tname_enum, args, body) \
-int object##_tname##_init args{ \
-  PL_CHECK_RET_BEG \
+err_t *object##_tname##_init args{ \
   object##_tname##_part_t *_part = NULL; \
   PL_ASSERT_NOT_NULL(thiz); \
-  PL_ASSERT_NOT_NULL(_part = object_as##_tname (thiz)); \
+  _part = object_as##_tname (err, thiz); \
+  PL_ASSERT_NOT_NULL(_part) \
   body; \
-  PL_CHECK_RET_END \
+  PL_FUNC_END \
+  return *err; \
 }
 
-TMP_OBJECT_INIT(_raw, TYPE_RAW, (object_t *thiz, void *ptr),
+TMP_OBJECT_INIT(_raw, TYPE_RAW, (err_t **err, object_t *thiz, void *ptr),
                 _part->ptr = ptr;
                )
 
-TMP_OBJECT_INIT(_int, TYPE_INT, (object_t *thiz, long int value),
+TMP_OBJECT_INIT(_int, TYPE_INT, (err_t **err, object_t *thiz, long int value),
                 _part->value = value;
                )
 
-TMP_OBJECT_INIT(_float, TYPE_FLOAT, (object_t *thiz, double value),
+TMP_OBJECT_INIT(_float, TYPE_FLOAT, (err_t **err, object_t *thiz, double value),
                 _part->value = value;
                )
 
-TMP_OBJECT_INIT(_str, TYPE_STR, (object_t *thiz, const char* text),
+TMP_OBJECT_INIT(_str, TYPE_STR, (err_t **err, object_t *thiz, const char* text),
                 _part->size = strlen(text);
                 _part->str = malloc(_part->size + 1);
                 memcpy(_part->str, text, _part->size);
                 _part->str[_part->size] = '\0';
                )
 
-TMP_OBJECT_INIT(_symbol, TYPE_SYMBOL, (object_t *thiz, const char* name),
+TMP_OBJECT_INIT(_symbol, TYPE_SYMBOL, (err_t **err, object_t *thiz, const char* name),
                 _part->size = strlen(name);
                 _part->str = malloc(_part->size + 1);
                 memcpy(_part->str, name, _part->size);
                 _part->str[_part->size] = '\0';
                )
 
-TMP_OBJECT_INIT(_gc_broken, TYPE_GC_BROKEN, (object_t *thiz, void *ptr),
+TMP_OBJECT_INIT(_gc_broken, TYPE_GC_BROKEN, (err_t **err, object_t *thiz, void *ptr),
                 _part->ptr = (object_t*)ptr;
                )
 
-TMP_OBJECT_INIT(_ref, TYPE_REF, (object_t *thiz, void *ptr),
+TMP_OBJECT_INIT(_ref, TYPE_REF, (err_t **err, object_t *thiz, void *ptr),
                 _part->ptr = (object_t*)ptr;
                )
 
 #undef TMP_OBJECT_INIT
 
-int object_raw_halt(object_t *thiz){
-  if(object_as_raw(thiz)!=NULL) {free(object_as_raw(thiz)->ptr);}
+err_t *object_raw_halt(err_t **err, object_t *thiz){
+  if(object_as_raw(err, thiz)!=NULL) {free(object_as_raw(err, thiz)->ptr);}
   return 0;
 }
-int object_int_halt(object_t *thiz){
+err_t *object_int_halt(err_t **err, object_t *thiz){
   return 0;
 }
-int object_float_halt(object_t *thiz){
+err_t *object_float_halt(err_t **err, object_t *thiz){
   return 0;
 }
-int object_str_halt(object_t *thiz){
-  if(object_as_str(thiz)!=NULL) {free(object_as_str(thiz)->str);}
+err_t *object_str_halt(err_t **err, object_t *thiz){
+  if(object_as_str(err, thiz)!=NULL) {free(object_as_str(err, thiz)->str);}
   return 0;
 }
-int object_symbol_halt(object_t *thiz){
-  if(object_as_symbol(thiz)!=NULL) {free(object_as_symbol(thiz)->str);}
+err_t *object_symbol_halt(err_t **err, object_t *thiz){
+  if(object_as_symbol(err, thiz)!=NULL) {free(object_as_symbol(err, thiz)->str);}
   return 0;
 }
-int object_gc_broken_halt(object_t *thiz){
+err_t *object_gc_broken_halt(err_t **err, object_t *thiz){
   return 0;
 }
-int object_ref_halt(object_t *thiz){
+err_t *object_ref_halt(err_t **err, object_t *thiz){
   return 0;
 }
 
-int object_halt(object_t *obj){
-  PL_CHECK_RET_BEG
+err_t *object_halt(err_t **err, object_t *obj){
   PL_ASSERT_NOT_NULL(obj);
   switch(obj->type){
   case TYPE_RAW:
-    PL_CHECK_RET(object_raw_halt(obj));
+    object_raw_halt(err, obj); PL_CHECK;
     break;
   case TYPE_INT:
-    PL_CHECK_RET(object_int_halt(obj));
+    object_int_halt(err, obj); PL_CHECK;
     break;
   case TYPE_FLOAT:
-    PL_CHECK_RET(object_float_halt(obj));
+    object_float_halt(err, obj); PL_CHECK;
     break;
   case TYPE_STR:
-    PL_CHECK_RET(object_str_halt(obj));
+    object_str_halt(err, obj); PL_CHECK;
     break;
   case TYPE_SYMBOL:
-    PL_CHECK_RET(object_symbol_halt(obj));
+    object_symbol_halt(err, obj); PL_CHECK;
     break;
   case TYPE_GC_BROKEN:
-    PL_CHECK_RET(object_gc_broken_halt(obj));
+    object_gc_broken_halt(err, obj); PL_CHECK;
     break;
   case TYPE_EXTRA:
     // extra halt
     break;
   case TYPE_REF:
-    PL_CHECK_RET(object_ref_halt(obj));
+    object_ref_halt(err, obj); PL_CHECK;
     break;
   default:
-    PL_ASSERT(0, err_typecheck());
+    PL_ASSERT(0, err_typecheck);
     break;
   }
-  PL_CHECK_RET_END
+  PL_FUNC_END
+  return *err;
 }
 
 
 // object copy init
 
-int object_copy_init(object_t *src, object_t *dst){
-  PL_CHECK_RET_BEG
+err_t *object_copy_init(err_t **err, object_t *src, object_t *dst){
   PL_ASSERT_NOT_NULL(src);
   PL_ASSERT_NOT_NULL(dst);
   
@@ -153,28 +153,32 @@ int object_copy_init(object_t *src, object_t *dst){
     // extra copy init
     break;
   default:
-    PL_ASSERT(0, err_typecheck());
+    PL_ASSERT(0, err_typecheck);
   }
-  PL_CHECK_RET_END
+  PL_FUNC_END
+  return *err;
 }
 
 
 // object cast
 
-int object_type_check(object_t *obj, enum_object_type_t type){
-  return obj!=NULL && obj->type == type;
+err_t *object_type_check(err_t **err, object_t *obj, enum_object_type_t type){
+  PL_ASSERT(obj!=NULL && obj->type == type, err_typecheck);
+  PL_FUNC_END
+  return *err;
 }
-void* object_part(object_t *obj){
-  PL_ASSERT_EX(obj!=NULL, err_null(), return NULL);
+void* object_part(err_t **err, object_t *obj){
+  if(obj==NULL) {return NULL;}
   size_t obj_addr = (size_t)obj;
   return (void*)(obj_addr + sizeof(object_t));
 }
 
 #define TMP_OBJECT_AS_DECL(_tname, tname_enum) \
-object##_tname##_part_t *object_as##_tname (object_t *obj){ \
-  PL_ASSERT_EX(obj!=NULL, err_null(), return NULL); \
-  PL_ASSERT_EX(object_type_check(obj, tname_enum), err_null(), return NULL); \
-  return (object##_tname##_part_t*)object_part(obj); \
+object##_tname##_part_t *object_as##_tname (err_t **err, object_t *obj){ \
+  PL_ASSERT(obj!=NULL, err_null); \
+  object_type_check(err, obj, tname_enum); PL_CHECK; \
+  PL_FUNC_END_EX(, return NULL); \
+  return (object##_tname##_part_t*)object_part(err, obj); \
 }
 
 TMP_OBJECT_AS_DECL(_raw,       TYPE_RAW      )
@@ -190,30 +194,32 @@ TMP_OBJECT_AS_DECL(_ref,       TYPE_REF      )
 
 
 // object tuple
-object_t *object_tuple_alloc(gc_manager_t *gcm, size_t size){
-  object_t *ret = gc_manager_object_array_alloc(gcm, TYPE_REF, size);
-  PL_ASSERT_EX(ret!=NULL, err_null(), return NULL);
+object_t *object_tuple_alloc(err_t **err, gc_manager_t *gcm, size_t size){
+  object_t *ret = gc_manager_object_array_alloc(err, gcm, TYPE_REF, size); PL_CHECK;
+  PL_FUNC_END
   return ret;
 }
-int object_member_set_value(object_t *tuple, size_t offset, object_t *value){
-  PL_CHECK_RET_BEG
-  PL_ASSERT(offset<object_array_size(tuple), err_out_of_range());
-  PL_ASSERT_NOT_NULL(object_as_ref(tuple));
-  object_as_ref(tuple)[offset].ptr = value;
-  PL_CHECK_RET_END
+err_t *object_member_set_value(err_t **err, object_t *tuple, size_t offset, object_t *value){
+  PL_ASSERT(offset<object_array_size(err, tuple), err_out_of_range);
+  PL_ASSERT_NOT_NULL(object_as_ref(err, tuple));
+  object_as_ref(err, tuple)[offset].ptr = value;
+  PL_FUNC_END
+  return *err;
 }
-void *object_member(object_t *tuple, size_t offset){
-  PL_ASSERT_EX(object_as_ref(tuple)!=NULL, err_null(), return NULL);
-  PL_ASSERT_EX(offset<object_array_size(tuple), err_out_of_range(), return NULL);
-  PL_ASSERT_EX(object_as_ref(tuple)[offset].ptr!=NULL, err_null(), return NULL);
-  return object_part(object_as_ref(tuple)[offset].ptr);
+void *object_member(err_t **err, object_t *tuple, size_t offset){
+  object_as_ref(err, tuple); PL_CHECK;
+  PL_ASSERT(offset<object_array_size(err, tuple), err_out_of_range);
+  PL_ASSERT_NOT_NULL(object_as_ref(err, tuple)[offset].ptr);
+  PL_FUNC_END_EX(,return NULL);
+  return object_part(err, object_as_ref(err, tuple)[offset].ptr);
 }
 
 #define TMP_OBJECT_MEMBER_DECL(_tname, tname_enum) \
-object##_tname##_part_t *object_member##_tname (object_t *tuple, size_t offset){ \
-  PL_ASSERT_EX(object_as_ref(tuple)!=NULL, err_null(), return NULL); \
-  PL_ASSERT_EX(object_type_check(object_as_ref(tuple)[offset].ptr, tname_enum), err_null(), return NULL); \
-  return (object##_tname##_part_t*)object_member(tuple, offset); \
+object##_tname##_part_t *object_member##_tname (err_t **err, object_t *tuple, size_t offset){ \
+  object_as_ref(err, tuple); PL_CHECK; \
+  object_type_check(err, object_as_ref(err, tuple)[offset].ptr, tname_enum); PL_CHECK; \
+  PL_FUNC_END_EX(,return NULL); \
+  return (object##_tname##_part_t*)object_member(err, tuple, offset); \
 }
 
 TMP_OBJECT_MEMBER_DECL(_raw,       TYPE_RAW      )
@@ -229,7 +235,7 @@ TMP_OBJECT_MEMBER_DECL(_ref,       TYPE_REF      )
 
 // object size
 
-size_t object_sizeof_part(enum_object_type_t obj_type){
+size_t object_sizeof_part(err_t **err, enum_object_type_t obj_type){
   switch(obj_type){
   case TYPE_RAW:       return sizeof(object_raw_part_t);
   case TYPE_INT:       return sizeof(object_int_part_t);
@@ -241,27 +247,28 @@ size_t object_sizeof_part(enum_object_type_t obj_type){
   case TYPE_REF:       return sizeof(object_ref_part_t);
   default:             break;
   }
-  PL_ASSERT_EX(0, err_typecheck(), 0);
+  PL_ASSERT(0, err_typecheck);
+  PL_FUNC_END;
   return 0;
 }
 
-size_t object_array_sizeof(enum_object_type_t obj_type, size_t n){
-  return sizeof(object_header_t) + n * object_sizeof_part(obj_type);
+size_t object_array_sizeof(err_t **err, enum_object_type_t obj_type, size_t n){
+  return sizeof(object_header_t) + n * object_sizeof_part(err, obj_type);
 }
 
-size_t object_sizeof(enum_object_type_t obj_type){
-  return object_array_sizeof(obj_type, 1);
+size_t object_sizeof(err_t **err, enum_object_type_t obj_type){
+  return object_array_sizeof(err, obj_type, 1);
 }
 
-size_t object_array_size(object_t *obj){
-  PL_ASSERT_EX(obj!=NULL, err_null(), return 0);
+size_t object_array_size(err_t **err, object_t *obj){
+  PL_ASSERT_EX(obj!=NULL, err_null(PL_ERR_DEFAULT_ARGS), return 0);
   size_t value_size = obj->size - sizeof(object_header_t);
-  return value_size / object_sizeof_part(obj->type);
+  return value_size / object_sizeof_part(err, obj->type);
 }
-void* object_array_index(object_t *obj, size_t index){
-  PL_ASSERT_EX(obj!=NULL, err_null(), return NULL);
+void* object_array_index(err_t **err, object_t *obj, size_t index){
+  PL_ASSERT_EX(obj!=NULL, err_null(PL_ERR_DEFAULT_ARGS), return NULL);
   size_t obj_addr = (size_t)obj;
-  size_t ret_addr = obj_addr + sizeof(object_header_t) + index * object_sizeof_part(obj->type);
+  size_t ret_addr = obj_addr + sizeof(object_header_t) + index * object_sizeof_part(err, obj->type);
   if(ret_addr >= obj_addr + obj->size) {return NULL;}
   
   return (void*)ret_addr;
@@ -270,8 +277,7 @@ void* object_array_index(object_t *obj, size_t index){
 
 // object gc support
 
-int object_mark(object_t *obj, int mark){
-  PL_CHECK_RET_BEG
+err_t *object_mark(err_t **err, object_t *obj, int mark){
   object_ref_part_t *value_ref = NULL;
   size_t count;
   
@@ -280,8 +286,8 @@ int object_mark(object_t *obj, int mark){
   
   obj->mark = mark;
   
-  count = object_array_size(obj);
-  PL_ASSERT(count>0, err_out_of_range());
+  count = object_array_size(err, obj);
+  PL_ASSERT(count>0, err_out_of_range);
   
   switch(obj->type){
   case TYPE_RAW:
@@ -294,51 +300,52 @@ int object_mark(object_t *obj, int mark){
     // extra-mark
     break;
   case TYPE_REF:
-    value_ref = object_as_ref(obj);
+    value_ref = object_as_ref(err, obj);
     PL_ASSERT_NOT_NULL(value_ref);
     while(count --> 0){
-      PL_CHECK_RET(object_mark(value_ref[count].ptr, mark));
+      object_mark(err, value_ref[count].ptr, mark); PL_CHECK;
     }
     break;
   default:
-    PL_ASSERT(0, err_typecheck());
+    PL_ASSERT(0, err_typecheck);
     break;
   }
-  PL_CHECK_RET_END
+  PL_FUNC_END
+  return *err;
 }
 
 
-int object_move(object_t *obj_old, object_t *obj_new){
-  PL_CHECK_RET_BEG
+err_t *object_move(err_t **err, object_t *obj_old, object_t *obj_new){
   PL_ASSERT_NOT_NULL(obj_old);
   PL_ASSERT_NOT_NULL(obj_new);
   if(obj_old != obj_new){
     memmove(obj_new, obj_old, obj_old->size);
   }
-  PL_CHECK_RET_END
+  PL_FUNC_END
+  return *err;
 }
 
 
-int obj_ptr_fix_gc_broken(object_t **pobj){
-  PL_CHECK_RET_BEG
+err_t *obj_ptr_fix_gc_broken(err_t **err, object_t **pobj){
   PL_ASSERT_NOT_NULL(pobj);
   PL_ASSERT_NOT_NULL(*pobj);
   
   object_gc_broken_part_t *broken_value = NULL;
   
   if((*pobj)->type == TYPE_GC_BROKEN){
-    broken_value = object_as_gc_broken(*pobj);
+    broken_value = object_as_gc_broken(err, *pobj);
     PL_ASSERT_NOT_NULL(broken_value);
     *pobj = broken_value->ptr;
   }
-  PL_CHECK_RET_END
+  PL_FUNC_END
+  return *err;
 }
-int object_fix_gc_broken(object_t *obj){
-  PL_CHECK_RET_BEG
+err_t *object_fix_gc_broken(err_t **err, object_t *obj){
+   
   PL_ASSERT_NOT_NULL(obj);
   object_ref_part_t *value_ref = NULL;
-  size_t count = object_array_size(obj);
-  PL_ASSERT(count>0, err_out_of_range());
+  size_t count = object_array_size(err, obj);
+  PL_ASSERT(count>0, err_out_of_range);
   
   switch(obj->type){
   case TYPE_RAW:
@@ -351,21 +358,21 @@ int object_fix_gc_broken(object_t *obj){
     // extra-fix_gc_broken
     break;
   case TYPE_REF:
-    value_ref = object_as_ref(obj);
+    value_ref = object_as_ref(err, obj);
     PL_ASSERT_NOT_NULL(value_ref);
     while(count --> 0){
-      PL_CHECK_RET(obj_ptr_fix_gc_broken(&(value_ref[count].ptr)));
+      obj_ptr_fix_gc_broken(err, &(value_ref[count].ptr)); PL_CHECK;
     }
     break;
   default:
     break;
   }
-  PL_CHECK_RET_END
+  PL_FUNC_END
+  return *err;
 }
 
 
-int object_ptr_rebase(object_t **pobj, object_t *old_pool, size_t old_pool_size, object_t *new_pool){
-  PL_CHECK_RET_BEG
+err_t *object_ptr_rebase(err_t **err, object_t **pobj, object_t *old_pool, size_t old_pool_size, object_t *new_pool){
   PL_ASSERT_NOT_NULL(pobj);
   PL_ASSERT_NOT_NULL(*pobj);
   PL_ASSERT_NOT_NULL(old_pool);
@@ -382,13 +389,14 @@ int object_ptr_rebase(object_t **pobj, object_t *old_pool, size_t old_pool_size,
   
   *pobj = (object_t*)new_pobj_addr;
   
-  PL_CHECK_RET_END
+  PL_FUNC_END
+  return *err;
 }
 
-int object_rebase(object_t *obj, object_t *old_pool, size_t old_pool_size, object_t *new_pool){
-  PL_CHECK_RET_BEG
+err_t *object_rebase(err_t **err, object_t *obj, object_t *old_pool, size_t old_pool_size, object_t *new_pool){
+   
   PL_ASSERT_NOT_NULL(obj);
-  size_t count = object_array_size(obj);
+  size_t count = object_array_size(err, obj);
   object_ref_part_t *value_ref = NULL;
   
   switch(obj->type){
@@ -402,15 +410,16 @@ int object_rebase(object_t *obj, object_t *old_pool, size_t old_pool_size, objec
     // extra-rebase
     break;
   case TYPE_REF:
-    value_ref = (object_ref_part_t*)object_part(obj);
+    value_ref = (object_ref_part_t*)object_part(err, obj);
     PL_ASSERT_NOT_NULL(value_ref);
     while(count --> 0){
-      PL_CHECK_RET(object_ptr_rebase(&(value_ref[count].ptr), old_pool, old_pool_size, new_pool));
+      object_ptr_rebase(err, &(value_ref[count].ptr), old_pool, old_pool_size, new_pool); PL_CHECK 
     }
     break;
   default:
     break;
   }
   
-  PL_CHECK_RET_END
+  PL_FUNC_END
+  return *err;
 }

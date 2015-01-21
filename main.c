@@ -27,60 +27,62 @@ fin:
 
 int main(int argc, char *argv[]) {
 //   return test_err(0);
-  
+  err_t *erre = NULL;
+  err_t **err = &erre;
   object_int_part_t *p_int = NULL;
   object_ref_part_t *p_ref = NULL;
   
   // init gc_manager
   gc_manager_t *gc_manager = (gc_manager_t*)malloc(sizeof(gc_manager_t));
   
-  gc_manager_init(gc_manager);
+  gc_manager_init(err, gc_manager);
   
   // test 1+1
   printf("test 1+1:\n");
-  object_t *i1 = gc_manager_object_alloc(gc_manager, TYPE_INT);
-  object_int_init(i1, 1);
+  object_t *i1 = gc_manager_object_alloc(err, gc_manager, TYPE_INT);
+  object_int_init(err, i1, 1);
   
-  object_t *i2 = gc_manager_object_alloc(gc_manager, TYPE_INT);
-  object_int_init(i1, 1);
+  object_t *i2 = gc_manager_object_alloc(err, gc_manager, TYPE_INT);
+  object_int_init(err, i1, 1);
   
-  object_t *i3 = gc_manager_object_alloc(gc_manager, TYPE_INT);
-  object_int_init(i1, object_as_int(i1)->value + object_as_int(i2)->value);
+  object_t *i3 = gc_manager_object_alloc(err, gc_manager, TYPE_INT);
+  object_int_init(err, i1, object_as_int(err, i1)->value + object_as_int(err, i2)->value);
   
   
-  gc_manager_root(gc_manager)->ptr = i3;
+  gc_manager_root(err, gc_manager)->ptr = i3;
   
   printf("  before gc: %d mem.\n", gc_manager->object_pool_size);
-  gc_verbose_object_pool(gc_manager);
-  gc_gc(gc_manager);
+  gc_verbose_object_pool(err, gc_manager);
+  gc_gc(err, gc_manager);
   printf("  after gc: %d mem.\n", gc_manager->object_pool_size);
-  gc_verbose_object_pool(gc_manager);
+  gc_verbose_object_pool(err, gc_manager);
   
   
   // test vector
   printf("test vector:\n");
   
-  i1 = gc_manager_object_alloc(gc_manager, TYPE_INT);
-  object_int_init(i1, 1);
+  i1 = gc_manager_object_alloc(err, gc_manager, TYPE_INT);
+  object_int_init(err, i1, 1);
   
-  object_vector_t *vec1 = object_vector_alloc(gc_manager);
-  object_vector_push(vec1, gc_manager, i1);
-  object_vector_top(vec1, i1);
-  object_vector_push(vec1, gc_manager, i1);
-  object_vector_pop(vec1, NULL);
-  object_vector_push(vec1, gc_manager, i1);
-  object_vector_pop(vec1, NULL);
-  object_vector_pop(vec1, NULL);
-  object_vector_pop(vec1, NULL);
-  object_vector_realloc(vec1, gc_manager);
+  object_vector_t *vec1 = object_vector_alloc(err, gc_manager); PL_CHECK;
+  object_vector_push(err, vec1, gc_manager, i1);
+  object_vector_top(err, vec1, i1);
+  object_vector_push(err, vec1, gc_manager, i1);
+  object_vector_pop(err, vec1, NULL);
+  object_vector_push(err, vec1, gc_manager, i1);
+  object_vector_pop(err, vec1, NULL);
+  object_vector_pop(err, vec1, NULL);
+  object_vector_pop(err, vec1, NULL);
+  object_vector_realloc(err, vec1, gc_manager);
   
-  gc_manager_root(gc_manager)->ptr = vec1;
+  gc_manager_root(err, gc_manager)->ptr = vec1;
   
   printf("  before gc: %d mem.\n", gc_manager->object_pool_size);
-  gc_verbose_object_pool(gc_manager);
-  gc_gc(gc_manager);
+  gc_verbose_object_pool(err, gc_manager);
+  gc_gc(err, gc_manager);
   printf("  after gc: %d mem.\n", gc_manager->object_pool_size);
-  gc_verbose_object_pool(gc_manager);
+  gc_verbose_object_pool(err, gc_manager);
   
+  PL_FUNC_END_EX(,err_print(*err));
   return 0;
 }
