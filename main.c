@@ -10,7 +10,7 @@ int test_err(void*ret){
   void*tmpval;
   void*subret;
   
-  while(1){
+  while(0){
     printf("err = %d\n", err);
     goto fin;
   }
@@ -65,16 +65,16 @@ int main(int argc, char *argv[]) {
   object_int_init(err, i1, 1);
   
   object_t *vec1 = gc_manager_object_alloc(err, gc_manager, TYPE_VECTOR); PL_CHECK;
-  object_vector_part_t *vec1_part = object_as_vector(err, vec1); PL_CHECK;
-  object_vector_part_init(err, vec1_part); PL_CHECK;
-  object_vector_push(err, vec1_part, gc_manager, i1);
-  object_vector_top(err, vec1_part, i1);
-  object_vector_push(err, vec1_part, gc_manager, i1);
-  object_vector_pop(err, vec1_part, NULL);
-  object_vector_push(err, vec1_part, gc_manager, i1);
-  object_vector_pop(err, vec1_part, NULL);
-  object_vector_pop(err, vec1_part, NULL);
-  object_vector_pop(err, vec1_part, NULL);
+  object_vector_init(err, vec1); PL_CHECK;
+  
+  object_vector_push(err, vec1, gc_manager, i1);
+  object_vector_top(err, vec1, i1);
+  object_vector_push(err, vec1, gc_manager, i1);
+  object_vector_pop(err, vec1, NULL);
+  object_vector_push(err, vec1, gc_manager, i1);
+  object_vector_pop(err, vec1, NULL);
+  object_vector_pop(err, vec1, NULL);
+  object_vector_pop(err, vec1, NULL);
   
   gc_manager_root(err, gc_manager)->ptr = vec1;
   

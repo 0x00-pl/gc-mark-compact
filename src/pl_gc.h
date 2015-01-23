@@ -25,7 +25,9 @@ object_t *gc_object_next(object_t *obj);
 object_t *gc_manager_object_pool_end(err_t **err, gc_manager_t *manager);
 
 
-err_t *gc_manager_resize_object_pool(err_t **err, gc_manager_t *manager, size_t new_size);
+err_t *gc_manager_object_pool_resize(err_t **err, gc_manager_t *manager, size_t new_size);
+
+object_t *gc_manager_object_array_slice(err_t **err, gc_manager_t *gcm, object_t *obj, size_t new_count_beg, size_t new_count_end);
 
 object_t *gc_manager_object_array_alloc(err_t** err, gc_manager_t* manager, enum_object_type_t obj_type, size_t count);
 

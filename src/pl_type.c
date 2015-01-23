@@ -28,48 +28,42 @@ const char *object_typename(enum_object_type_t type){
 err_t *object##_tname##_init args{ \
   object##_tname##_part_t *_part = NULL; \
   PL_ASSERT_NOT_NULL(thiz); \
-  _part = object_as##_tname (err, thiz); \
-  PL_ASSERT_NOT_NULL(_part) \
-  body; \
+  _part = object_as##_tname (err, thiz); PL_CHECK; \
+  body; PL_CHECK; \
   PL_FUNC_END \
   return *err; \
 }
 
 TMP_OBJECT_INIT(_raw, TYPE_RAW, (err_t **err, object_t *thiz, void *ptr, int auto_free),
-                _part->auto_free = auto_free;
-                _part->ptr = ptr;
+                object_raw_part_init(err, _part, ptr, auto_free);
                )
 
 TMP_OBJECT_INIT(_int, TYPE_INT, (err_t **err, object_t *thiz, long int value),
-                _part->value = value;
+                object_int_part_init(err, _part, value);
                )
 
 TMP_OBJECT_INIT(_float, TYPE_FLOAT, (err_t **err, object_t *thiz, double value),
-                _part->value = value;
+                object_float_part_init(err, _part, value);
                )
 
 TMP_OBJECT_INIT(_str, TYPE_STR, (err_t **err, object_t *thiz, const char* text),
-                _part->size = strlen(text);
-                _part->str = malloc(_part->size + 1);
-                memcpy(_part->str, text, _part->size);
-                _part->str[_part->size] = '\0';
+                object_str_part_init(err, _part, text);
                )
 
 TMP_OBJECT_INIT(_symbol, TYPE_SYMBOL, (err_t **err, object_t *thiz, object_t *name),
-                _part->name = name;
+                object_symbol_part_init(err, _part, name);
                )
 
-TMP_OBJECT_INIT(_gc_broken, TYPE_GC_BROKEN, (err_t **err, object_t *thiz, void *ptr),
-                _part->ptr = (object_t*)ptr;
+TMP_OBJECT_INIT(_gc_broken, TYPE_GC_BROKEN, (err_t **err, object_t *thiz, object_t *ptr),
+                object_gc_broken_part_init(err, _part, ptr);
                )
 
 TMP_OBJECT_INIT(_vector, TYPE_VECTOR, (err_t **err, object_t *thiz),
-                _part->count = 0;
-                _part->pdata = NULL;
+                object_vector_part_init(err, _part);
                )
 
-TMP_OBJECT_INIT(_ref, TYPE_REF, (err_t **err, object_t *thiz, void *ptr),
-                _part->ptr = (object_t*)ptr;
+TMP_OBJECT_INIT(_ref, TYPE_REF, (err_t **err, object_t *thiz, object_t *ptr),
+                object_ref_part_init(err, _part, ptr);
                )
 
 #undef TMP_OBJECT_INIT
@@ -228,7 +222,7 @@ void* object_part(err_t **err, object_t *obj){
 
 #define TMP_OBJECT_AS_DECL(_tname, tname_enum) \
 object##_tname##_part_t *object_as##_tname (err_t **err, object_t *obj){ \
-  PL_ASSERT(obj!=NULL, err_null); \
+  PL_ASSERT_NOT_NULL(obj); \
   object_type_check(err, obj, tname_enum); PL_CHECK; \
   PL_FUNC_END_EX(, return NULL); \
   return (object##_tname##_part_t*)object_part(err, obj); \
@@ -330,7 +324,7 @@ void* object_array_index(err_t **err, object_t *obj, size_t index){
 
 
 // object vecter
-err_t *object_vector_push(err_t **err, object_vector_part_t *vector_part, struct gc_manager_t_decl *gcm, object_t *item){
+err_t *object_vector_part_push(err_t **err, object_vector_part_t *vector_part, struct gc_manager_t_decl *gcm, object_t *item){
   object_t *new_data = NULL;
   void *src = NULL;
   void *dst = NULL;
@@ -360,7 +354,7 @@ err_t *object_vector_push(err_t **err, object_vector_part_t *vector_part, struct
   PL_FUNC_END
   return *err;
 }
-err_t *object_vector_pop(err_t **err, object_vector_part_t *vector_part, object_t *dest){
+err_t *object_vector_part_pop(err_t **err, object_vector_part_t *vector_part, object_t *dest){
   object_t *new_data = NULL;
   void *src_part = NULL;
   void *dst_part = NULL;
@@ -373,7 +367,7 @@ err_t *object_vector_pop(err_t **err, object_vector_part_t *vector_part, object_
   if(dest!=NULL){
     // type check
     PL_ASSERT(vector_part->pdata->type == dest->type, err_typecheck);
-    dst_part = object_array_index(err, dest, 0); PL_CHECK;
+    dst_part = object_part(err, dest); PL_CHECK;
     object_part_move(err, src_part, dst_part, vector_part->pdata->type); PL_CHECK;
   }
   
@@ -383,7 +377,7 @@ err_t *object_vector_pop(err_t **err, object_vector_part_t *vector_part, object_
   return *err;
 }
 
-void *object_vector_top(err_t **err, object_vector_part_t *vector_part, object_t *dest){
+void *object_vector_part_top(err_t **err, object_vector_part_t *vector_part, object_t *dest){
   object_t *new_data = NULL;
   void *src_part = NULL;
   void *dst_part = NULL;
@@ -394,7 +388,7 @@ void *object_vector_top(err_t **err, object_vector_part_t *vector_part, object_t
 
   src_part = object_array_index(err, vector_part->pdata, vector_part->count-1); PL_CHECK;
   if(dest!=NULL){
-    dst_part = object_array_index(err, dest, 0); PL_CHECK;
+    dst_part = object_part(err, dest); PL_CHECK;
     object_part_move(err, src_part, dst_part, vector_part->pdata->type); PL_CHECK;
   }
  
@@ -402,7 +396,82 @@ void *object_vector_top(err_t **err, object_vector_part_t *vector_part, object_t
   return src_part;
 }
 
+object_t *object_vector_part_to_array(err_t **err, object_vector_part_t *vector_part, struct gc_manager_t_decl *gcm){
+  object_t *new_array = NULL;
+  new_array = gc_manager_object_array_slice(err, gcm, vector_part->pdata, 0, vector_part->count); PL_CHECK;
+  PL_FUNC_END
+  return new_array;
+}
 
+void *object_vector_part_index(err_t **err, object_vector_part_t *vector_part, int index, object_t *dest){
+  object_t *new_data = NULL;
+  void *src_part = NULL;
+  void *dst_part = NULL;
+  size_t max_count;
+  
+
+  if(index<0) {index = vector_part->count + index;}
+  
+  src_part = object_array_index(err, vector_part->pdata, index); PL_CHECK;
+  if(dest!=NULL){
+    // type check
+    PL_ASSERT(vector_part->pdata->type == dest->type, err_typecheck);
+    
+    dst_part = object_part(err, dest); PL_CHECK;
+    object_part_move(err, src_part, dst_part, vector_part->pdata->type); PL_CHECK;
+  }
+ 
+  PL_FUNC_END
+  return src_part;
+}
+enum_object_type_t object_vector_part_type(err_t **err, object_vector_part_t *vector_part){
+  if(vector_part->pdata == NULL){
+    return TYPE_UNKNOW;
+  }
+  return vector_part->pdata->type;
+}
+
+err_t *object_vector_push(err_t **err, object_t *vec, struct gc_manager_t_decl *gcm, object_t *item){
+  object_vector_part_t *vector_part = object_as_vector(err, vec); PL_CHECK;
+  object_vector_part_push(err, vector_part, gcm, item); PL_CHECK;
+  PL_FUNC_END
+  return *err;
+}
+err_t *object_vector_pop(err_t **err, object_t *vec, object_t *dest){
+  object_vector_part_t *vector_part = object_as_vector(err, vec); PL_CHECK;
+  object_vector_part_pop(err, vector_part, dest); PL_CHECK;
+  PL_FUNC_END
+  return *err;
+}
+void *object_vector_top(err_t **err, object_t *vec, object_t *dest){
+  void *ret = NULL;
+  object_vector_part_t *vector_part = object_as_vector(err, vec); PL_CHECK;
+  ret = object_vector_part_top(err, vector_part, dest); PL_CHECK;
+  PL_FUNC_END
+  return ret;
+}
+
+object_t *object_vector_to_array(err_t **err, object_t *vec, struct gc_manager_t_decl *gcm){
+  object_t *ret = NULL;
+  object_vector_part_t *vector_part = object_as_vector(err, vec); PL_CHECK;
+  ret = object_vector_part_to_array(err, vector_part, gcm); PL_CHECK;
+  PL_FUNC_END
+  return ret;
+}
+void *object_vector_index(err_t **err, object_t *vec, int index, object_t *dest){
+  void *ret = NULL;
+  object_vector_part_t *vector_part = object_as_vector(err, vec); PL_CHECK;
+  ret = object_vector_part_index(err, vector_part, index, dest); PL_CHECK;
+  PL_FUNC_END
+  return ret;
+}
+enum_object_type_t object_vector_type(err_t **err, object_t *vec){
+  enum_object_type_t ret;
+  object_vector_part_t *vector_part = object_as_vector(err, vec); PL_CHECK;
+  ret = object_vector_part_type(err, vector_part); PL_CHECK;
+  PL_FUNC_END
+  return ret;
+}
 
 // object gc support
 

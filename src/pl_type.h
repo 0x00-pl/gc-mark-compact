@@ -13,7 +13,7 @@ enum type_e{
   TYPE_SYMBOL,
   TYPE_GC_BROKEN,
   TYPE_REF,
-        TYPE_VECTOR,
+  TYPE_VECTOR,
   TYPE_UNKNOW
 };
 typedef size_t enum_object_type_t;
@@ -67,11 +67,11 @@ typedef struct{
 err_t *object_raw_init(err_t **err, object_t *thiz, void *ptr, int auto_free);
 err_t *object_int_init(err_t **err, object_t *thiz, long int value);
 err_t *object_float_init(err_t **err, object_t *thiz, double value);
-err_t *object_str_init(err_t **err, object_t *thiz, const char* text);
-err_t *object_symbol_init(err_t **err, object_t *thiz, object_t* name);
-err_t *object_gc_broken_init(err_t **err, object_t *thiz, void* ptr);
+err_t *object_str_init(err_t **err, object_t *thiz, const char *text);
+err_t *object_symbol_init(err_t **err, object_t *thiz, object_t *name);
+err_t *object_gc_broken_init(err_t **err, object_t *thiz, object_t *ptr);
 err_t *object_vector_init(err_t **err, object_t *thiz);
-err_t *object_ref_init(err_t **err, object_t *thiz, void* ptr);
+err_t *object_ref_init(err_t **err, object_t *thiz, object_t *ptr);
 
 err_t *object_raw_halt(err_t **err, object_t *thiz);
 err_t *object_str_halt(err_t **err, object_t *thiz);
@@ -122,10 +122,18 @@ object_ref_part_t       *object_member_ref       (err_t **err, object_t *tuple, 
 
 // object vecter
 struct gc_manager_t_decl;
-err_t *object_vector_push(err_t **err, object_vector_part_t *vector_part, struct gc_manager_t_decl *gcm, object_t *item);
-err_t *object_vector_pop(err_t **err, object_vector_part_t *vector_part, object_t *dest);
-void *object_vector_top(err_t **err, object_vector_part_t *vector_part, object_t *dest);
+err_t *object_vector_part_push(err_t **err, object_vector_part_t *vector_part, struct gc_manager_t_decl *gcm, object_t *item);
+err_t *object_vector_part_pop(err_t **err, object_vector_part_t *vector_part, object_t *dest);
+void *object_vector_part_top(err_t **err, object_vector_part_t *vector_part, object_t *dest);
+object_t *object_vector_part_to_array(err_t **err, object_vector_part_t *vector_part, struct gc_manager_t_decl *gcm);
+void *object_vector_part_index(err_t **err, object_vector_part_t *vector_part, int index, object_t *dest);
+enum_object_type_t object_vector_part_type(err_t **err, object_vector_part_t *vector_part);
 
+err_t *object_vector_push(err_t **err, object_t *vec, struct gc_manager_t_decl *gcm, object_t *item);
+err_t *object_vector_pop(err_t **err, object_t *vec, object_t *dest);
+void *object_vector_top(err_t **err, object_t *vec, object_t *dest);
+object_t *object_vector_to_array(err_t **err, object_t *vec, struct gc_manager_t_decl *gcm);
+void *object_vector_index(err_t **err, object_t *vec, int index, object_t *dest);
 
 // object size
 size_t object_sizeof(err_t **err, enum_object_type_t obj_type);

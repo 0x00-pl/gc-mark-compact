@@ -59,7 +59,7 @@ object_t *gc_manager_object_pool_end(err_t **err, gc_manager_t *manager){
   return (object_t*)ret;
 }
 
-err_t *gc_manager_resize_object_pool(err_t **err, gc_manager_t *manager, size_t new_size){
+err_t *gc_manager_object_pool_resize(err_t **err, gc_manager_t *manager, size_t new_size){
    
   object_t *iter;
   object_t *new_object_pool= NULL;
@@ -97,7 +97,7 @@ object_t *gc_manager_object_array_alloc(err_t **err, gc_manager_t *manager, enum
   required_size = manager->object_pool_size + object_array_sizeof(err, obj_type, count);
   
   if(required_size > manager->object_pool_maxsize){
-    if(gc_manager_resize_object_pool(err, manager, required_size)<0) {return NULL;}
+    if(gc_manager_object_pool_resize(err, manager, required_size)<0) {return NULL;}
   }
   
   new_object = gc_manager_object_pool_end(err, manager);
@@ -124,10 +124,32 @@ object_t *gc_manager_object_array_expand(err_t **err, gc_manager_t *gcm, object_
   ret = gc_manager_object_array_alloc(err, gcm, obj->type, new_count); PL_CHECK;
   src_mem = object_array_index(err, obj, 0); PL_CHECK;
   dst_mem = object_array_index(err, ret, 0); PL_CHECK;
-  memcpy(dst_mem, src_mem, object_sizeof_part(err, obj->type)); PL_CHECK;
+  memcpy(dst_mem, src_mem, new_count * object_sizeof_part(err, obj->type)); PL_CHECK;
   PL_FUNC_END
   return ret;
 }
+object_t *gc_manager_object_array_slice(err_t **err, gc_manager_t *gcm, object_t *obj, size_t new_count_beg, size_t new_count_end){
+  object_t *ret = NULL;
+  void *src_mem = NULL;
+  void *dst_mem = NULL;
+  size_t obj_count;
+  size_t new_count = new_count_end - new_count_beg;
+  size_t new_size = 0;
+  
+  PL_ASSERT(new_count_beg <= new_count_end, err_out_of_range);
+  obj_count = object_array_count(err, obj); PL_CHECK;
+  PL_ASSERT(new_count_end <= obj_count, err_out_of_range);
+  PL_ASSERT(0 <= new_count_beg, err_out_of_range);
+  
+  new_size = object_array_sizeof(err, obj->type, new_count); PL_CHECK;
+  ret = gc_manager_object_array_alloc(err, gcm, obj->type, new_count); PL_CHECK;
+  src_mem = object_array_index(err, obj, new_count_beg); PL_CHECK;
+  dst_mem = object_array_index(err, ret, 0); PL_CHECK;
+  memcpy(dst_mem, src_mem, new_count * object_sizeof_part(err, obj->type)); PL_CHECK;
+  PL_FUNC_END
+  return ret;
+}
+
 
 
 err_t *gc_manager_mark(err_t **err, gc_manager_t *manager){

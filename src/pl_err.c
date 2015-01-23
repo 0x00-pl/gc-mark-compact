@@ -51,3 +51,6 @@ err_t *err_typecheck(err_t **err, const char *file, size_t line, const char *ext
 err_t *err_out_of_range(err_t **err, const char *file, size_t line, const char *extra_message){
   return err_new(err, file, line, extra_message, ERR_OUT_OF_RANGE);
 }
+err_t *err_parsing(err_t **err, const char *file, size_t line, const char *extra_message){
+  return err_new(err, file, line, extra_message, ERR_PARSING);
+}
