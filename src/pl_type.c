@@ -100,6 +100,7 @@ err_t *object_halt(err_t **err, object_t *obj){
   case TYPE_SYMBOL:
   case TYPE_GC_BROKEN:
   case TYPE_REF:
+  case TYPE_VECTOR:
     break;
   default:
     PL_ASSERT(0, err_typecheck);
@@ -215,6 +216,7 @@ err_t *object_type_check(err_t **err, object_t *obj, enum_object_type_t type){
   return *err;
 }
 void* object_part(err_t **err, object_t *obj){
+  (void)err;
   if(obj==NULL) {return NULL;}
   size_t obj_addr = (size_t)obj;
   return (void*)(obj_addr + sizeof(object_t));
@@ -309,6 +311,7 @@ size_t object_sizeof(err_t **err, enum_object_type_t obj_type){
 
 size_t object_array_count(err_t **err, object_t *obj){
   PL_ASSERT_EX(obj!=NULL, err_null(PL_ERR_DEFAULT_ARGS), return 0);
+  
   size_t value_size = obj->size - sizeof(object_header_t);
   return value_size / object_sizeof_part(err, obj->type);
 }
@@ -333,18 +336,17 @@ err_t *object_vector_part_push(err_t **err, object_vector_part_t *vector_part, s
   // able to chage type with size == 0
   if(vector_part->count == 0){
     vector_part->pdata = gc_manager_object_array_alloc(err, gcm, item->type, 1); PL_CHECK;
+  }else{
+    // type check
+    PL_ASSERT(vector_part->pdata->type == item->type, err_typecheck);
+    
+    max_count = object_array_count(err, vector_part->pdata); PL_CHECK;
+    // extend pdata
+    if(vector_part->count+1 > max_count){
+      new_data = gc_manager_object_array_expand(err, gcm, vector_part->pdata, max_count * 2); PL_CHECK;
+      vector_part->pdata = new_data;
+    }
   }
-  
-  // type check
-  PL_ASSERT(vector_part->pdata->type == item->type, err_typecheck);
-  
-  max_count = object_array_count(err, vector_part->pdata); PL_CHECK;
-  // extend pdata
-  if(vector_part->count+1 >= max_count){
-    new_data = gc_manager_object_array_expand(err, gcm, vector_part->pdata, max_count * 2); PL_CHECK;
-    vector_part->pdata = new_data;
-  }
-  
   src = object_array_index(err, item, 0); PL_CHECK;
   dst = object_array_index(err, vector_part->pdata, vector_part->count); PL_CHECK;
   object_part_move(err, src, dst, vector_part->pdata->type); PL_CHECK;
@@ -355,12 +357,10 @@ err_t *object_vector_part_push(err_t **err, object_vector_part_t *vector_part, s
   return *err;
 }
 err_t *object_vector_part_pop(err_t **err, object_vector_part_t *vector_part, object_t *dest){
-  object_t *new_data = NULL;
   void *src_part = NULL;
   void *dst_part = NULL;
-  size_t max_count;
   
-  
+  if(vector_part->count == 0) {return *err;}
   vector_part->count--;  
 
   src_part = object_array_index(err, vector_part->pdata, vector_part->count); PL_CHECK;
@@ -372,16 +372,16 @@ err_t *object_vector_part_pop(err_t **err, object_vector_part_t *vector_part, ob
   }
   
   object_part_halt(err, src_part, vector_part->pdata->type); PL_CHECK;
-  
+  if(vector_part->count == 0){
+    vector_part->pdata = NULL;
+  }
   PL_FUNC_END
   return *err;
 }
 
 void *object_vector_part_top(err_t **err, object_vector_part_t *vector_part, object_t *dest){
-  object_t *new_data = NULL;
   void *src_part = NULL;
   void *dst_part = NULL;
-  size_t max_count;
   
   // type check
   PL_ASSERT(vector_part->pdata->type == dest->type, err_typecheck); 
@@ -404,15 +404,13 @@ object_t *object_vector_part_to_array(err_t **err, object_vector_part_t *vector_
 }
 
 void *object_vector_part_index(err_t **err, object_vector_part_t *vector_part, int index, object_t *dest){
-  object_t *new_data = NULL;
   void *src_part = NULL;
   void *dst_part = NULL;
-  size_t max_count;
   
 
-  if(index<0) {index = vector_part->count + index;}
+  if(index<0) {index = (int)vector_part->count + index;}
   
-  src_part = object_array_index(err, vector_part->pdata, index); PL_CHECK;
+  src_part = object_array_index(err, vector_part->pdata, (size_t)index); PL_CHECK;
   if(dest!=NULL){
     // type check
     PL_ASSERT(vector_part->pdata->type == dest->type, err_typecheck);
@@ -425,6 +423,7 @@ void *object_vector_part_index(err_t **err, object_vector_part_t *vector_part, i
   return src_part;
 }
 enum_object_type_t object_vector_part_type(err_t **err, object_vector_part_t *vector_part){
+  (void)err;
   if(vector_part->pdata == NULL){
     return TYPE_UNKNOW;
   }
@@ -432,9 +431,12 @@ enum_object_type_t object_vector_part_type(err_t **err, object_vector_part_t *ve
 }
 
 err_t *object_vector_push(err_t **err, object_t *vec, struct gc_manager_t_decl *gcm, object_t *item){
-  object_vector_part_t *vector_part = object_as_vector(err, vec); PL_CHECK;
-  object_vector_part_push(err, vector_part, gcm, item); PL_CHECK;
-  PL_FUNC_END
+  size_t gs = gc_manager_stack_object_get_depth(gcm);
+  
+  gc_manager_stack_object_push(err, gcm, &vec); PL_CHECK;
+  gc_manager_object_reserve(err, gcm, object_sizeof(err, item->type)); PL_CHECK;
+  object_vector_part_push(err, object_as_vector(err, vec), gcm, item); PL_CHECK;
+  PL_FUNC_END_EX(gc_manager_stack_object_balance(gcm,gs),);
   return *err;
 }
 err_t *object_vector_pop(err_t **err, object_t *vec, object_t *dest){
@@ -472,10 +474,146 @@ enum_object_type_t object_vector_type(err_t **err, object_t *vec){
   PL_FUNC_END
   return ret;
 }
+size_t object_vector_count(err_t **err, object_t *vec){
+  object_vector_part_t *vector_part = object_as_vector(err, vec); PL_CHECK;
+  PL_FUNC_END
+  return vector_part->count;
+}
+
+
+// verbose
+size_t print_indentation(size_t indentation){
+  while(indentation-->0){
+    printf(" ");
+  }
+  return indentation;
+}
+err_t *object_verbose(err_t **err, object_t *obj, int recursive, size_t indentation, size_t limit){
+  object_raw_part_t       *raw_part;
+  object_int_part_t       *int_part;
+  object_float_part_t     *float_part;
+  object_str_part_t       *str_part;
+  object_symbol_part_t    *symbol_part;
+  object_gc_broken_part_t *gc_broken_part;
+  object_vector_part_t    *vector_part;
+  object_ref_part_t       *ref_part;
+  size_t count;
+  size_t i;
+  
+  if(obj==NULL){
+    print_indentation(indentation);
+    printf("NULL\n");
+    return *err;
+  }
+  count = object_array_count(err, obj); PL_CHECK;
+  if(limit!=0 && limit<count) {count=limit;}
+  
+  print_indentation(indentation);
+  printf("@%p size: %zu ", obj, obj->size);
+  switch(obj->type){
+    case TYPE_RAW:
+      raw_part = object_as_raw(err, obj); PL_CHECK;
+      printf("type: raw\n");
+      for(i=0; i<count; i++){
+        print_indentation(indentation+1);
+        printf("{ptr:%p, autofree:%d} \n", raw_part[i].ptr, raw_part[i].auto_free);
+      }
+      break;
+    case TYPE_INT:
+      int_part = object_as_int(err, obj); PL_CHECK;
+      printf("type: int\n");
+      for(i=0; i<count; i++){
+        print_indentation(indentation+1);
+        printf("{d:%ld, x:0x%x} \n", int_part[i].value, (unsigned int)int_part[i].value);
+      }
+      break;
+    case TYPE_FLOAT:
+      float_part = object_as_float(err, obj); PL_CHECK;
+      printf("type: float\n");
+      for(i=0; i<count; i++){
+        print_indentation(indentation+1);
+        printf("{lf:%lf} \n", float_part[i].value);
+      }
+      break;
+    case TYPE_STR:
+      str_part = object_as_str(err, obj); PL_CHECK;
+      printf("type: str\n");
+      for(i=0; i<count; i++){
+        print_indentation(indentation+1);
+        printf("{str:%s} \n", str_part[i].str);
+      }
+      break;
+    case TYPE_SYMBOL:
+      symbol_part = object_as_symbol(err, obj); PL_CHECK;
+      printf("type: symbol\n");
+      if(recursive>0){
+        for(i=0; i<count; i++){
+          print_indentation(indentation+1);
+          printf("{symbol:%p} \n", symbol_part[i].name);
+          object_verbose(err, symbol_part[i].name, recursive-1, indentation+2, 0); PL_CHECK;
+        }
+      }else{
+        for(i=0; i<count; i++){
+          print_indentation(indentation+1);
+          printf("{symbol:%p} \n", symbol_part[i].name);
+        }
+      }
+      break;
+    case TYPE_GC_BROKEN:
+      gc_broken_part = object_as_gc_broken(err, obj); PL_CHECK;
+      printf("type: gc-broken\n");
+
+      for(i=0; i<count; i++){
+        print_indentation(indentation+1);
+        printf("{gc-broken:%p} \n", gc_broken_part[i].ptr);
+      }
+      break;
+    case TYPE_VECTOR:
+      vector_part = object_as_vector(err, obj); PL_CHECK;
+      printf("type: vector\n");
+      if(recursive>0){
+        for(i=0; i<count; i++){
+          print_indentation(indentation+1);
+          printf("{count:%zu} \n", vector_part[i].count);
+          if(vector_part[i].count > 0){
+            object_verbose(err, vector_part[i].pdata, recursive-1, indentation+2, vector_part[i].count); PL_CHECK;
+          }
+        }
+      }else{
+        for(i=0; i<count; i++){
+          print_indentation(indentation+1);
+          printf("{count:%zu} \n", vector_part[i].count);
+        }
+      }
+      break;
+    case TYPE_REF:
+      ref_part = object_as_ref(err, obj); PL_CHECK;
+      printf("type: ref\n");
+      if(recursive>0){
+        for(i=0; i<count; i++){
+          print_indentation(indentation+1);
+          printf("{ptr:%p} \n", ref_part[i].ptr);
+          object_verbose(err, ref_part[i].ptr, recursive-1, indentation+2, 0); PL_CHECK;
+        }
+      }else{
+        for(i=0; i<count; i++){
+          print_indentation(indentation+1);
+          printf("{ptr:%p} \n", ref_part[i].ptr);
+        }
+      }
+      break;
+    default:
+      print_indentation(indentation+1);
+      printf("type: unknow\n");
+  }
+  PL_FUNC_END
+  return *err;
+}
+
 
 // object gc support
 
-err_t *object_mark(err_t **err, object_t *obj, int mark, size_t limit){
+err_t *object_mark(err_t **err, object_t *obj, size_t mark, size_t limit){
   object_symbol_part_t *symbol_part = NULL;
   object_vector_part_t *vector_part = NULL;
   object_ref_part_t *ref_part = NULL;
@@ -549,7 +687,7 @@ err_t *object_part_move(err_t **err, void *part_src, void *part_dst, enum_object
 
 err_t *obj_ptr_fix_gc_broken(err_t **err, object_t **pobj){
   PL_ASSERT_NOT_NULL(pobj);
-  PL_ASSERT_NOT_NULL(*pobj);
+  if(*pobj == NULL) {return *err;}
   
   object_gc_broken_part_t *broken_value = NULL;
   
@@ -603,8 +741,6 @@ err_t *object_fix_gc_broken(err_t **err, object_t *obj){
 
 
 err_t *object_ptr_rebase(err_t **err, object_t **pobj, object_t *old_pool, size_t old_pool_size, object_t *new_pool){
-  PL_ASSERT_NOT_NULL(pobj);
-  PL_ASSERT_NOT_NULL(*pobj);
   PL_ASSERT_NOT_NULL(old_pool);
   PL_ASSERT_NOT_NULL(new_pool);
   size_t old_pool_addr     = (size_t)old_pool;

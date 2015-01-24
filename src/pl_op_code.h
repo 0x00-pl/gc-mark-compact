@@ -19,7 +19,7 @@ object_t *op_find;
 object_t *op_jmp;
 object_t *op_jn;
 object_t *op_push;
-
+err_t *op_init_global(err_t **err, gc_manager_t *gcm);
 
 int object_is_nil(err_t **err, object_t *obj);
 

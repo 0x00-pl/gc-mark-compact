@@ -5,6 +5,7 @@
 #include "pl_op_code.h"
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 
 
@@ -35,7 +36,8 @@ err_t *parser_skip_space(err_t **err, const char *text, size_t *pos){
   return *err;
 }
 int parser_is_space(err_t **err, char c){
-  return c=='\v'|c==' '|c=='\n'|c=='\t'|c=='\r'|c==';';
+  (void)err;
+  return c=='\v'||c==' '||c=='\n'||c=='\t'||c=='\r'||c==';';
 }
 err_t *string_unescape(err_t **err, const char *src, size_t size, char *dst){
   size_t i;
@@ -183,16 +185,14 @@ object_t *parser_parse_node_sharp(err_t **err, gc_manager_t * gcm, const char *t
   if((ret = parser_parse_node_sharp_number(err, gcm, text, size)) != NULL){
     return ret;
   }
-  PL_FUNC_END_EX(,ret=NULL)
-  return ret;
+  return NULL; // no rule match
 }
 
 object_t *parser_parse_node_number_b(err_t **err, gc_manager_t * gcm, const char *text, size_t size){
   object_t *ret = NULL;
   size_t p = 0;
   int sign = 1;
-  size_t int_value = 0;
-  char str_buff[size+1];
+  long int int_value = 0;
     
   //sign
   if(text[0]=='+') {sign = 1; p++;}
@@ -222,8 +222,7 @@ object_t *parser_parse_node_number_o(err_t **err, gc_manager_t * gcm, const char
   object_t *ret = NULL;
   size_t p = 0;
   int sign = 1;
-  size_t int_value = 0;
-  char str_buff[size+1];
+  long int int_value = 0;
     
   //sign
   if(text[0]=='+') {sign = 1; p++;}
@@ -248,10 +247,9 @@ object_t *parser_parse_node_number_d(err_t **err, gc_manager_t * gcm, const char
   object_t *ret = NULL;
   size_t p = 0;
   int sign = 1;
-  size_t int_value = 0;
-  size_t float_value = 0;
-  size_t float_cursor = 1;
-  char str_buff[size+1];
+  long int int_value = 0;
+  double float_value;
+  double float_cursor = 1;
     
   //sign
   if(text[0]=='+') {sign = 1; p++;}
@@ -275,7 +273,7 @@ object_t *parser_parse_node_number_d(err_t **err, gc_manager_t * gcm, const char
     if(text[p]!='.'){return NULL;}
     else{p++;}
     
-    float_value = int_value;
+    float_value = 1.0f * (double)int_value;
     for(;p<size;p++){
       float_cursor = float_cursor / 10;
       if('0'<=text[p] && text[p]<='9'){
@@ -294,8 +292,7 @@ object_t *parser_parse_node_number_x(err_t **err, gc_manager_t * gcm, const char
   object_t *ret = NULL;
   size_t p = 0;
   int sign = 1;
-  size_t int_value = 0;
-  char str_buff[size+1];
+  long int int_value = 0;
     
   //sign
   if(text[0]=='+') {sign = 1; p++;}
@@ -383,7 +380,12 @@ object_t *parser_parse_exp(err_t **err, gc_manager_t * gcm, const char *text, si
   object_t *item = NULL;
   object_t *item_ref = NULL;
   size_t p;
+  size_t count;
   int is_vector = 0;
+  
+  size_t gs = gc_manager_stack_object_get_depth(gcm);
+  gc_manager_stack_object_push(err, gcm, &ret); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &item_ref); PL_CHECK;
   
   if(parser_is_space(err, text[*pos])){
     parser_skip_space(err, text, pos); PL_CHECK;
@@ -395,7 +397,7 @@ object_t *parser_parse_exp(err_t **err, gc_manager_t * gcm, const char *text, si
     is_vector = 1;
   }
   if(text[p]!='('){
-    return NULL;
+    goto fin;
   }else{
     p++;
   }
@@ -405,7 +407,7 @@ object_t *parser_parse_exp(err_t **err, gc_manager_t * gcm, const char *text, si
   if(is_vector){
     item_ref = gc_manager_object_alloc(err, gcm, TYPE_REF); PL_CHECK;
     object_ref_init(err, item_ref, g_vector); PL_CHECK;
-    object_vector_push(err, ret, gcm, item_ref);
+    object_vector_push(err, ret, gcm, item_ref); PL_CHECK;
   }
   
   while(1){
@@ -416,15 +418,60 @@ object_t *parser_parse_exp(err_t **err, gc_manager_t * gcm, const char *text, si
     if(text[p]==')'){ p++; break; }
 
     item = parser_parse_node(err, gcm, text, &p); PL_CHECK;
-    if(item == NULL) {return NULL;}
+    if(item == NULL) {ret = NULL; goto fin;}
     item_ref = gc_manager_object_alloc(err, gcm, TYPE_REF); PL_CHECK;
     object_ref_init(err, item_ref, item); PL_CHECK;
-    object_vector_push(err, ret, gcm, item_ref);
+    object_vector_push(err, ret, gcm, item_ref); PL_CHECK;
   }
   
-  ret = object_vector_to_array(err, ret, gcm);
+  count = object_vector_count(err, ret);
+  if(count>0){
+    ret = object_vector_to_array(err, ret, gcm); PL_CHECK;
+  }else{
+    ret = g_nil;
+  }
   
-  PL_FUNC_END_EX(,ret=NULL);
+  *pos = p;
+  PL_FUNC_END_EX(gc_manager_stack_object_balance(gcm,gs), ret=NULL);
   return ret;
 }
+
+err_t *parser_verbose(err_t **err, object_t *exp){
+  object_ref_part_t *ref_part = NULL;
+  object_int_part_t *int_part = NULL;
+  object_str_part_t *str_part = NULL;
+  size_t count;
+  size_t i;
+  
+  count = object_array_count(err, exp); PL_CHECK;
+  switch(exp->type){
+    case TYPE_REF:
+      ref_part = object_as_ref(err, exp); PL_CHECK;
+      printf("(");
+      for(i=0; i<count; i++){
+        parser_verbose(err, ref_part[i].ptr); PL_CHECK;
+        printf(" ");
+      }
+      printf(")");
+      break;
+    case TYPE_STR:
+      str_part = object_as_str(err, exp);
+      for(i=0; i<count; i++){
+        printf("\"%s\" ", str_part[i].str);
+      }
+      break;
+    case TYPE_INT:
+      int_part = object_as_int(err, exp);
+      for(i=0; i<count; i++){
+        printf("%ld ", int_part[i].value);
+      }
+      break;
+    default:
+      object_verbose(err, exp, 999, 0, 0); PL_CHECK;
+  }
+  
+  PL_FUNC_END
+  return *err;
+}
+
 

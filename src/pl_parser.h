@@ -24,6 +24,8 @@ object_t *parser_parse_node_symbol(err_t **err, gc_manager_t * gcm, const char *
 object_t *parser_parse_node(err_t **err, gc_manager_t * gcm, const char *text, size_t *pos);
 object_t *parser_parse_exp(err_t **err, gc_manager_t * gcm, const char *text, size_t *pos);
 
+err_t *parser_verbose(err_t **err, object_t *exp);
+
 
 
 #endif

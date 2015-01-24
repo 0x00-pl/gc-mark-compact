@@ -12,11 +12,11 @@ int err_print(err_t *err){
     printf("error: %d ", err->code);
   }
   if(err->extra_message != NULL){
-    printf("msg: %s\n", err->code, err->extra_message);
+    printf("msg: %s\n", err->extra_message);
   }
   
   if(err->file != NULL){
-    printf("in file:%s line:%d \n", err->file, err->line);
+    printf("in file:%s line:%zu \n", err->file, err->line);
   }
   err_print(err->inner);
   

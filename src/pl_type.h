@@ -134,6 +134,7 @@ err_t *object_vector_pop(err_t **err, object_t *vec, object_t *dest);
 void *object_vector_top(err_t **err, object_t *vec, object_t *dest);
 object_t *object_vector_to_array(err_t **err, object_t *vec, struct gc_manager_t_decl *gcm);
 void *object_vector_index(err_t **err, object_t *vec, int index, object_t *dest);
+size_t object_vector_count(err_t **err, object_t *vec);
 
 // object size
 size_t object_sizeof(err_t **err, enum_object_type_t obj_type);
@@ -142,12 +143,15 @@ size_t object_array_sizeof(err_t **err, enum_object_type_t obj_type, size_t n);
 size_t object_array_count(err_t **err, object_t *obj);
 void* object_array_index(err_t **err, object_t *obj, size_t index);
 
+// object verbose
+err_t *object_verbose(err_t** err, object_t* obj, int recursive, size_t indentation, size_t limit);
 
 // object gc support
-err_t *object_mark(err_t **err, object_t *obj, int mark, size_t limit);
+err_t *object_mark(err_t **err, object_t *obj, size_t mark, size_t limit);
 err_t *object_ptr_rebase(err_t **err, object_t **pobj, object_t *old_pool, size_t old_pool_size, object_t *new_pool);
 err_t *object_rebase(err_t **err, object_t *obj, object_t *old_pool, size_t old_pool_size, object_t *new_pool);
 err_t *object_move(err_t **err, object_t *obj_old, object_t *obj_new);
 err_t *object_part_move(err_t **err, void *part_src, void *part_dst, enum_object_type_t type);
+err_t *obj_ptr_fix_gc_broken(err_t **err, object_t **pobj);
 err_t *object_fix_gc_broken(err_t **err, object_t *obj);
 #endif
