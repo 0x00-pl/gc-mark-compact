@@ -54,6 +54,6 @@ err_t *gc_manager_compact(err_t **err, gc_manager_t *manager);
 
 err_t *gc_gc(err_t **err, gc_manager_t *manager);
 
-err_t *gc_verbose_object_pool(err_t **err, gc_manager_t *manager);
+err_t *gc_verbose_object_pool(err_t **err, gc_manager_t *manager, int detal);
 
 #endif

@@ -42,10 +42,10 @@ int main(int argc, char *argv[]) {
   gc_manager_root(err, gc_manager)->ptr = i3;
   
   printf("  before gc:\n");
-  gc_verbose_object_pool(err, gc_manager);
+  gc_verbose_object_pool(err, gc_manager, 0);
   gc_gc(err, gc_manager);
   printf("  after gc\n");
-  gc_verbose_object_pool(err, gc_manager);
+  gc_verbose_object_pool(err, gc_manager, 0);
   
   
   // test vector
@@ -70,10 +70,10 @@ int main(int argc, char *argv[]) {
   gc_manager_root(err, gc_manager)->ptr = vec1;
   
   printf("  before gc:\n");
-  gc_verbose_object_pool(err, gc_manager);
+  gc_verbose_object_pool(err, gc_manager, 0);
   gc_gc(err, gc_manager);
   printf("  after gc\n");
-  gc_verbose_object_pool(err, gc_manager);
+  gc_verbose_object_pool(err, gc_manager, 0);
   
   
   // parser
@@ -102,10 +102,10 @@ int main(int argc, char *argv[]) {
   
   gc_manager_root(err, gc_manager)->ptr = parsed_exp_code;
   printf("  before gc:\n");
-  gc_verbose_object_pool(err, gc_manager);
+  gc_verbose_object_pool(err, gc_manager, 0);
   gc_gc(err, gc_manager);
   printf("  after gc\n");
-  gc_verbose_object_pool(err, gc_manager);
+  gc_verbose_object_pool(err, gc_manager, 0);
   
   PL_FUNC_END_EX(gc_manager_stack_object_balance(gc_manager,gs); gc_manager_halt(err, gc_manager),err_print(*err));
   

@@ -338,7 +338,6 @@ err_t *compile_verbose_lambda(err_t **err, gc_manager_t *gcm, object_t *lambda, 
   gcm_stack_depth = gc_manager_stack_object_get_depth(gcm);
   gc_manager_stack_object_push(err, gcm, &lambda); PL_CHECK;
   
-  print_indentation(indentation);
   printf("(#lambda\n");
   
   compile_verbose_array(err, gcm, object_tuple_lambda_get_argname(err, lambda), indentation+1); PL_CHECK;
@@ -435,7 +434,7 @@ err_t *compile_verbose_code(err_t **err, gc_manager_t *gcm, object_t *code, size
               compile_verbose_lambda(err, gcm, arg1, indentation+1);
             }else{
               // print array
-              compile_verbose_array(err, gcm, arg1, indentation+1);
+              compile_verbose_array(err, gcm, arg1, 0);
             }
             break;
           default:

@@ -312,15 +312,17 @@ err_t *gc_gc(err_t **err, gc_manager_t *manager){
 }
 
 
-err_t *gc_verbose_object_pool(err_t **err, gc_manager_t *manager){
+err_t *gc_verbose_object_pool(err_t **err, gc_manager_t *manager, int detal){
   size_t count = 0;
   object_t *iter = NULL;
   printf("[obj num: %zu, mem: %zu] \n", manager->object_count, manager->object_pool_size);
-//   for(iter=manager->object_pool; iter<gc_manager_object_pool_end(err, manager); iter=gc_object_next(iter)){
-//     printf("[%zu]: ", count++);
-//     object_verbose(err, iter, 1, 0, 0);
-//   }
-   printf("\n");
+  if(detal){
+    for(iter=manager->object_pool; iter<gc_manager_object_pool_end(err, manager); iter=gc_object_next(iter)){
+      printf("[%zu]: ", count++);
+      object_verbose(err, iter, 1, 0, 0);
+    }
+  }
+  printf("\n");
   return *err;
 }
 
