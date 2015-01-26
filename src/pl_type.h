@@ -21,23 +21,22 @@ typedef size_t enum_object_type_t;
 // typename
 const char *object_typename(enum_object_type_t);
 
-typedef struct object_header_t_decl{
-  size_t size; // sizeof(object_t) + array_size * sizeof(value)
-  size_t type;
-  size_t mark;
-} object_header_t, object_t;
+
+struct object_t_decl;
 
 typedef struct{
   int auto_free;
   void *ptr;
 } object_raw_part_t;
 
+typedef long int object_int_value_t;
 typedef struct{
-  long int value;
+  object_int_value_t value;
 } object_int_part_t;
 
+typedef double object_float_value_t;
 typedef struct{
-  double value;
+  object_float_value_t value;
 } object_float_part_t;
 
 typedef struct{
@@ -46,22 +45,44 @@ typedef struct{
 } object_str_part_t;
 
 typedef struct{
-        object_t *name;
+  struct object_t_decl *name;
 } object_symbol_part_t;
 
 typedef struct{
-  struct object_header_t_decl *ptr;
+  struct object_t_decl *ptr;
 } object_gc_broken_part_t;
 
 typedef struct{
   size_t count; // data count
-  object_t *pdata;
+  struct object_t_decl *pdata;
 } object_vector_part_t;
 
 typedef struct{
-  struct object_header_t_decl *ptr;
+  struct object_t_decl *ptr;
 } object_ref_part_t;
 
+typedef struct object_header_t_decl{
+  size_t size; // sizeof(object_t) + array_size * sizeof(value)
+  size_t type;
+  size_t mark;
+} object_header_t;
+
+typedef struct object_t_decl {
+  size_t size; // sizeof(object_t) + array_size * sizeof(value)
+  size_t type;
+  size_t mark;
+  union{
+    object_raw_part_t _raw;
+    object_int_part_t _int;
+    object_float_part_t _float;
+    object_str_part_t _str;
+    object_symbol_part_t _symbol;
+    object_gc_broken_part_t _gc_broken;
+    object_vector_part_t _vector;
+    object_ref_part_t _ref;
+    char _unknow;
+  } part;
+} object_t;
 
 // object init/halt
 err_t *object_raw_init(err_t **err, object_t *thiz, void *ptr, int auto_free);
@@ -142,6 +163,7 @@ size_t object_sizeof_part(err_t **err, enum_object_type_t obj_type);
 size_t object_array_sizeof(err_t **err, enum_object_type_t obj_type, size_t n);
 size_t object_array_count(err_t **err, object_t *obj);
 void* object_array_index(err_t **err, object_t *obj, size_t index);
+#define OBJ_ARR_AT(array, _part_name, index) ((&((array)->part._part_name))[index])
 
 // object verbose
 err_t *object_verbose(err_t** err, object_t* obj, int recursive, size_t indentation, size_t limit);

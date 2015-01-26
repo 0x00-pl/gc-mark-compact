@@ -1,20 +1,29 @@
 #include "pl_op_code.h"
 
-err_t *op_init_global(err_t **err, gc_manager_t *gcm){
-  g_add    = gc_manager_object_alloc(err, gcm, TYPE_STR); PL_CHECK; object_str_init(err, g_add    , "g_add    "); PL_CHECK; gc_manager_stack_object_push(err, gcm, &g_add   ); PL_CHECK;
-  g_cond   = gc_manager_object_alloc(err, gcm, TYPE_STR); PL_CHECK; object_str_init(err, g_cond   , "g_cond   "); PL_CHECK; gc_manager_stack_object_push(err, gcm, &g_cond  ); PL_CHECK;
-  g_cons   = gc_manager_object_alloc(err, gcm, TYPE_STR); PL_CHECK; object_str_init(err, g_cons   , "g_cons   "); PL_CHECK; gc_manager_stack_object_push(err, gcm, &g_cons  ); PL_CHECK;
-  g_frame  = gc_manager_object_alloc(err, gcm, TYPE_STR); PL_CHECK; object_str_init(err, g_frame  , "g_frame  "); PL_CHECK; gc_manager_stack_object_push(err, gcm, &g_frame ); PL_CHECK;
-  g_lambda = gc_manager_object_alloc(err, gcm, TYPE_STR); PL_CHECK; object_str_init(err, g_lambda , "g_lambda "); PL_CHECK; gc_manager_stack_object_push(err, gcm, &g_lambda); PL_CHECK;
-  g_vector = gc_manager_object_alloc(err, gcm, TYPE_STR); PL_CHECK; object_str_init(err, g_vector , "g_vector "); PL_CHECK; gc_manager_stack_object_push(err, gcm, &g_vector); PL_CHECK;
-  g_nil    = gc_manager_object_alloc(err, gcm, TYPE_STR); PL_CHECK; object_str_init(err, g_nil    , "g_nil    "); PL_CHECK; gc_manager_stack_object_push(err, gcm, &g_nil   ); PL_CHECK;
+#include <stdlib.h>
 
-  op_call  = gc_manager_object_alloc(err, gcm, TYPE_STR); PL_CHECK; object_str_init(err, op_call  , "op_call  "); PL_CHECK; gc_manager_stack_object_push(err, gcm, &op_call ); PL_CHECK;
-  op_ret   = gc_manager_object_alloc(err, gcm, TYPE_STR); PL_CHECK; object_str_init(err, op_ret   , "op_ret   "); PL_CHECK; gc_manager_stack_object_push(err, gcm, &op_ret  ); PL_CHECK;
-  op_find  = gc_manager_object_alloc(err, gcm, TYPE_STR); PL_CHECK; object_str_init(err, op_find  , "op_find  "); PL_CHECK; gc_manager_stack_object_push(err, gcm, &op_find ); PL_CHECK;
-  op_jmp   = gc_manager_object_alloc(err, gcm, TYPE_STR); PL_CHECK; object_str_init(err, op_jmp   , "op_jmp   "); PL_CHECK; gc_manager_stack_object_push(err, gcm, &op_jmp  ); PL_CHECK;
-  op_jn    = gc_manager_object_alloc(err, gcm, TYPE_STR); PL_CHECK; object_str_init(err, op_jn    , "op_jn    "); PL_CHECK; gc_manager_stack_object_push(err, gcm, &op_jn   ); PL_CHECK;
-  op_push  = gc_manager_object_alloc(err, gcm, TYPE_STR); PL_CHECK; object_str_init(err, op_push  , "op_push  "); PL_CHECK; gc_manager_stack_object_push(err, gcm, &op_push ); PL_CHECK;
+err_t *op_init_global(err_t **err, gc_manager_t *gcm){
+  (void)gcm;
+  // define lambda if set!
+  
+  g_add    = (object_t*)malloc(object_sizeof(err, TYPE_STR)); g_add   ->size=object_sizeof(err, TYPE_STR); g_add   ->type=TYPE_STR; object_str_init(err, g_add    , "g_add    "); PL_CHECK; 
+  g_cond   = (object_t*)malloc(object_sizeof(err, TYPE_STR)); g_cond  ->size=object_sizeof(err, TYPE_STR); g_cond  ->type=TYPE_STR; object_str_init(err, g_cond   , "g_cond   "); PL_CHECK; 
+  g_cons   = (object_t*)malloc(object_sizeof(err, TYPE_STR)); g_cons  ->size=object_sizeof(err, TYPE_STR); g_cons  ->type=TYPE_STR; object_str_init(err, g_cons   , "g_cons   "); PL_CHECK; 
+  g_frame  = (object_t*)malloc(object_sizeof(err, TYPE_STR)); g_frame ->size=object_sizeof(err, TYPE_STR); g_frame ->type=TYPE_STR; object_str_init(err, g_frame  , "g_frame  "); PL_CHECK; 
+  g_lambda = (object_t*)malloc(object_sizeof(err, TYPE_STR)); g_lambda->size=object_sizeof(err, TYPE_STR); g_lambda->type=TYPE_STR; object_str_init(err, g_lambda , "g_lambda "); PL_CHECK; 
+  g_vector = (object_t*)malloc(object_sizeof(err, TYPE_STR)); g_vector->size=object_sizeof(err, TYPE_STR); g_vector->type=TYPE_STR; object_str_init(err, g_vector , "g_vector "); PL_CHECK; 
+  g_nil    = (object_t*)malloc(object_sizeof(err, TYPE_STR)); g_nil   ->size=object_sizeof(err, TYPE_STR); g_nil   ->type=TYPE_STR; object_str_init(err, g_nil    , "g_nil    "); PL_CHECK; 
+  g_define = (object_t*)malloc(object_sizeof(err, TYPE_STR)); g_define->size=object_sizeof(err, TYPE_STR); g_define->type=TYPE_STR; object_str_init(err, g_define , "g_define "); PL_CHECK; 
+  g_if     = (object_t*)malloc(object_sizeof(err, TYPE_STR)); g_if    ->size=object_sizeof(err, TYPE_STR); g_if    ->type=TYPE_STR; object_str_init(err, g_if     , "g_if     "); PL_CHECK; 
+  g_set    = (object_t*)malloc(object_sizeof(err, TYPE_STR)); g_set   ->size=object_sizeof(err, TYPE_STR); g_set   ->type=TYPE_STR; object_str_init(err, g_set    , "g_set    "); PL_CHECK; 
+  g_quote  = (object_t*)malloc(object_sizeof(err, TYPE_STR)); g_quote ->size=object_sizeof(err, TYPE_STR); g_quote ->type=TYPE_STR; object_str_init(err, g_quote  , "g_quote  "); PL_CHECK; 
+  
+  op_call  = (object_t*)malloc(object_sizeof(err, TYPE_STR)); op_call ->size=object_sizeof(err, TYPE_STR); op_call ->type=TYPE_STR; object_str_init(err, op_call  , "op_call  "); PL_CHECK; 
+  op_ret   = (object_t*)malloc(object_sizeof(err, TYPE_STR)); op_ret  ->size=object_sizeof(err, TYPE_STR); op_ret  ->type=TYPE_STR; object_str_init(err, op_ret   , "op_ret   "); PL_CHECK; 
+  op_find  = (object_t*)malloc(object_sizeof(err, TYPE_STR)); op_find ->size=object_sizeof(err, TYPE_STR); op_find ->type=TYPE_STR; object_str_init(err, op_find  , "op_find  "); PL_CHECK; 
+  op_jmp   = (object_t*)malloc(object_sizeof(err, TYPE_STR)); op_jmp  ->size=object_sizeof(err, TYPE_STR); op_jmp  ->type=TYPE_STR; object_str_init(err, op_jmp   , "op_jmp   "); PL_CHECK; 
+  op_jn    = (object_t*)malloc(object_sizeof(err, TYPE_STR)); op_jn   ->size=object_sizeof(err, TYPE_STR); op_jn   ->type=TYPE_STR; object_str_init(err, op_jn    , "op_jn    "); PL_CHECK; 
+  op_push  = (object_t*)malloc(object_sizeof(err, TYPE_STR)); op_push ->size=object_sizeof(err, TYPE_STR); op_push ->type=TYPE_STR; object_str_init(err, op_push  , "op_push  "); PL_CHECK; 
   
   
   PL_FUNC_END
@@ -71,7 +80,7 @@ object_t *object_tuple_cons_get_cdr(err_t **err, object_t *cons){
 object_t *object_tuple_lambda_alloc(err_t **err, struct gc_manager_t_decl *gcm, object_t *argname, object_t *exp, object_t *code, object_t *env){
   PL_ASSERT(argname->type == TYPE_SYMBOL, err_typecheck);
   PL_ASSERT(exp->type == TYPE_REF, err_typecheck);
-  PL_ASSERT(env->type == TYPE_REF, err_typecheck);
+  PL_ASSERT(env == NULL || env->type == TYPE_REF, err_typecheck);
   
   object_t *new_lambda = object_tuple_alloc(err, gcm, 5); PL_CHECK;
   object_member_set_value(err, new_lambda, 0, g_lambda); PL_CHECK;
@@ -81,6 +90,9 @@ object_t *object_tuple_lambda_alloc(err_t **err, struct gc_manager_t_decl *gcm, 
   object_member_set_value(err, new_lambda, 4, env); PL_CHECK;
   PL_FUNC_END_EX(,new_lambda=NULL);
   return new_lambda;
+}
+int object_tuple_is_lambda(err_t **err, object_t *lambda){
+  return object_tuple_member_index(err, lambda, 0) == g_lambda;
 }
 object_t *object_tuple_lambda_get_argname(err_t **err, object_t *lambda){
   return object_tuple_member_index(err, lambda, 1);
@@ -94,6 +106,7 @@ object_t *object_tuple_lambda_get_code(err_t **err, object_t *lambda){
 object_t *object_tuple_lambda_get_env(err_t **err, object_t *lambda){
   return object_tuple_member_index(err, lambda, 4);
 }
+
 // env:[cons(g_nil,prev_env), cons(symbol,object_t)]
 // frame:{op_frame, lambda, env:env, stack:vector(ref), pc:int, prev_frame:frame()}
 object_t *object_tuple_frame_alloc(err_t **err, struct gc_manager_t_decl *gcm, object_t *lambda, object_t *env, object_t *prev_frame){

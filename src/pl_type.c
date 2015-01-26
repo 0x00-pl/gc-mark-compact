@@ -218,8 +218,9 @@ err_t *object_type_check(err_t **err, object_t *obj, enum_object_type_t type){
 void* object_part(err_t **err, object_t *obj){
   (void)err;
   if(obj==NULL) {return NULL;}
-  size_t obj_addr = (size_t)obj;
-  return (void*)(obj_addr + sizeof(object_t));
+//   size_t obj_addr = (size_t)obj;
+//   return (void*)(obj_addr + sizeof(object_header_t));
+  return &(obj->part._unknow);
 }
 
 #define TMP_OBJECT_AS_DECL(_tname, tname_enum) \
@@ -431,7 +432,10 @@ enum_object_type_t object_vector_part_type(err_t **err, object_vector_part_t *ve
 }
 
 err_t *object_vector_push(err_t **err, object_t *vec, struct gc_manager_t_decl *gcm, object_t *item){
-  size_t gs = gc_manager_stack_object_get_depth(gcm);
+  size_t gs;
+  
+  if(item == NULL) {return *err;}
+  gs = gc_manager_stack_object_get_depth(gcm);
   
   gc_manager_stack_object_push(err, gcm, &vec); PL_CHECK;
   gc_manager_object_reserve(err, gcm, object_sizeof(err, item->type)); PL_CHECK;
@@ -482,7 +486,7 @@ size_t object_vector_count(err_t **err, object_t *vec){
 
 
 // verbose
-size_t print_indentation(size_t indentation){
+static size_t print_indentation(size_t indentation){
   while(indentation-->0){
     printf(" ");
   }

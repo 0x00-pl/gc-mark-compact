@@ -4,15 +4,14 @@
 #include "src/pl_gc.h"
 #include "src/pl_parser.h"
 #include "src/pl_op_code.h"
+#include "src/pl_compile.h"
 
 
 /* run this program using the console pauser or add your own getch, system("pause") or input loop */
 
-
 int main(int argc, char *argv[]) {
   (void)argc;(void)argv;
 //   return test_err(0);
-  
   err_t *erre = NULL;
   err_t **err = &erre;
 //   object_int_part_t *p_int = NULL;
@@ -23,7 +22,7 @@ int main(int argc, char *argv[]) {
   
   gc_manager_init(err, gc_manager);
   size_t gs = gc_manager_stack_object_get_depth(gc_manager);
-  
+
   
   // test 1+1
   printf("test 1+1:\n");
@@ -80,27 +79,35 @@ int main(int argc, char *argv[]) {
   // parser
   printf("test parser:\n");
   size_t pos = 0;
-  object_t *parsed_exp; 
+  object_t *parsed_exp;
+  object_t *parsed_exp_code; 
   
-  parsed_exp = parser_parse_node(err, gc_manager, ";;; The FACT procedure computes the factorial \n\
+  parsed_exp = parser_parse_node(err, gc_manager, "(;;; The FACT procedure computes the factorial \n\
 ;;; of a non-negative integer.\n\
 (define fact\n\
   (lambda (n)\n\
     (if (= n 0)\n\
         1        ;Base case: return 1\n\
-        (* n (fact (- n 1))))))", &pos);
+        (* n (fact (- n 1)))))))", &pos);
   parser_verbose(err, parsed_exp); PL_CHECK;
   printf("\n === end === \n\n");
   
   
-  gc_manager_root(err, gc_manager)->ptr = parsed_exp;
   
+  gc_manager_stack_object_push(err, gc_manager, &parsed_exp_code);
+  parsed_exp_code = compile_global(err, gc_manager, parsed_exp);
+  printf("\n === code === \n");
+  compile_verbose_code(err, gc_manager, parsed_exp_code, 0); PL_CHECK;
+  printf("\n === code end === \n\n");
+  
+  gc_manager_root(err, gc_manager)->ptr = parsed_exp_code;
   printf("  before gc:\n");
   gc_verbose_object_pool(err, gc_manager);
   gc_gc(err, gc_manager);
   printf("  after gc\n");
   gc_verbose_object_pool(err, gc_manager);
   
-  PL_FUNC_END_EX(gc_manager_stack_object_balance(gc_manager,gs),err_print(*err));
+  PL_FUNC_END_EX(gc_manager_stack_object_balance(gc_manager,gs); gc_manager_halt(err, gc_manager),err_print(*err));
+  
   return 0;
 }

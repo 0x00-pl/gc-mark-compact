@@ -12,6 +12,11 @@ object_t *g_frame;
 object_t *g_lambda;
 object_t *g_vector;
 object_t *g_nil;
+object_t *g_define;
+object_t *g_if;
+object_t *g_set;
+object_t *g_quote;
+
 
 object_t *op_call;
 object_t *op_ret;
@@ -33,6 +38,7 @@ object_t *object_tuple_cons_get_cdr(err_t **err, object_t *cons);
 
 // lambda:{op_lambda, arg_name:[symbol], exp:ref, code:[ref], env:[cons(symbol,ref)]}
 object_t *object_tuple_lambda_alloc(err_t **err, struct gc_manager_t_decl *gcm, object_t *argname, object_t *exp, object_t *code, object_t *env);
+int object_tuple_is_lambda(err_t **err, object_t *lambda);
 object_t *object_tuple_lambda_get_argname(err_t **err, object_t *lambda);
 object_t *object_tuple_lambda_get_exp(err_t **err, object_t *lambda);
 object_t *object_tuple_lambda_get_code(err_t **err, object_t *lambda);

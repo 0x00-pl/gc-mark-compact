@@ -40,6 +40,7 @@ err_t *gc_manager_halt(err_t **err, gc_manager_t *manager){
   
   free(manager->object_pool);
   free(manager->stack_pobject_pool);
+  free(manager);
   
   PL_FUNC_END
   return *err;
@@ -158,6 +159,20 @@ object_t *gc_manager_object_array_alloc(err_t **err, gc_manager_t *manager, enum
 }
 object_t *gc_manager_object_alloc(err_t **err, gc_manager_t *manager, enum_object_type_t obj_type){
   return gc_manager_object_array_alloc(err, manager, obj_type, 1);
+}
+object_t *gc_manager_object_alloc_ref(err_t **err, gc_manager_t *manager, object_t *obj){
+  object_t *ref_ = NULL;
+  
+  gc_manager_stack_object_push(err, manager, &obj); PL_CHECK;
+  
+  ref_ = gc_manager_object_alloc(err, manager, TYPE_REF); PL_CHECK;
+  object_ref_init(err, ref_, obj); PL_CHECK;
+  
+  PL_FUNC_END_EX(
+    gc_manager_stack_object_pop(err, manager, 1);
+    , ref_=NULL);
+             
+  return ref_;
 }
 err_t *gc_manager_object_reserve(err_t **err, gc_manager_t *manager, size_t mem_size){
   size_t required_size;

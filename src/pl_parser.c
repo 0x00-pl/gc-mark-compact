@@ -316,13 +316,19 @@ object_t *parser_parse_node_number_x(err_t **err, gc_manager_t * gcm, const char
   return ret;
 }
 object_t *parser_parse_node_symbol(err_t **err, gc_manager_t * gcm, const char *text, size_t size){
+  object_t *name = NULL;
   object_t *ret = NULL;
   char symbol_str[size+1];
   
   strncpy(symbol_str, text, size);
   symbol_str[size] = '\0';
-  ret = gc_manager_object_alloc(err, gcm, TYPE_STR); PL_CHECK;
-  object_str_init(err, ret, symbol_str); PL_CHECK;
+  
+  gc_manager_object_reserve(err, gcm, object_sizeof(err, TYPE_STR) + object_sizeof(err, TYPE_SYMBOL)); PL_CHECK;
+  
+  name = gc_manager_object_alloc(err, gcm, TYPE_STR); PL_CHECK;
+  object_str_init(err, name, symbol_str); PL_CHECK;
+  ret = gc_manager_object_alloc(err, gcm, TYPE_SYMBOL); PL_CHECK;
+  object_symbol_init(err, ret, name); PL_CHECK;
   
   PL_FUNC_END_EX(,ret=NULL)
   return ret;
@@ -348,7 +354,7 @@ object_t *parser_parse_node(err_t **err, gc_manager_t * gcm, const char *text, s
     p++;
   }
   
-  if(p-*pos == 1 && (text[*pos]=='+' || text[*pos]=='-')){
+  if(p-*pos == 1 && (text[*pos]=='+' || text[*pos]=='-' || text[*pos]=='.')){
     ret = parser_parse_node_symbol(err, gcm, &text[*pos], p-*pos); PL_CHECK;
     if(ret != NULL){
       *pos = p;
@@ -440,8 +446,12 @@ err_t *parser_verbose(err_t **err, object_t *exp){
   object_ref_part_t *ref_part = NULL;
   object_int_part_t *int_part = NULL;
   object_str_part_t *str_part = NULL;
+  object_vector_part_t *vector_part = NULL;
+  object_symbol_part_t *symbol_part = NULL;
   size_t count;
-  size_t i;
+  size_t i,j;
+  
+  if(exp == NULL) {goto fin;}
   
   count = object_array_count(err, exp); PL_CHECK;
   switch(exp->type){
@@ -460,10 +470,28 @@ err_t *parser_verbose(err_t **err, object_t *exp){
         printf("\"%s\" ", str_part[i].str);
       }
       break;
+    case TYPE_SYMBOL:
+      symbol_part = object_as_symbol(err, exp);
+      for(i=0; i<count; i++){
+        str_part = object_as_str(err, symbol_part->name);
+        printf("$%s ", str_part->str);
+      }
+      break;
     case TYPE_INT:
       int_part = object_as_int(err, exp);
       for(i=0; i<count; i++){
         printf("%ld ", int_part[i].value);
+      }
+      break;
+    case TYPE_VECTOR:
+      vector_part = object_as_vector(err, exp); PL_CHECK;
+      for(i=0; i<count; i++){
+        printf("#(");
+        for(j=0; j<vector_part[i].count; j++){
+          parser_verbose(err, (&vector_part[i].pdata->part._ref)[j].ptr); PL_CHECK;
+          printf(" ");
+        }
+        printf(") ");
       }
       break;
     default:
