@@ -1,17 +1,17 @@
 #include "pl_op_code.h"
 
 #include <stdlib.h>
+#include "pl_gc.h"
+#include "pl_type.h"
 
 err_t *op_init_global(err_t **err, gc_manager_t *gcm){
   (void)gcm;
   // define lambda if set!
   
-  g_add    = (object_t*)malloc(object_sizeof(err, TYPE_STR)); g_add   ->size=object_sizeof(err, TYPE_STR); g_add   ->type=TYPE_STR; object_str_init(err, g_add    , "g_add    "); PL_CHECK; 
-  g_cond   = (object_t*)malloc(object_sizeof(err, TYPE_STR)); g_cond  ->size=object_sizeof(err, TYPE_STR); g_cond  ->type=TYPE_STR; object_str_init(err, g_cond   , "g_cond   "); PL_CHECK; 
   g_cons   = (object_t*)malloc(object_sizeof(err, TYPE_STR)); g_cons  ->size=object_sizeof(err, TYPE_STR); g_cons  ->type=TYPE_STR; object_str_init(err, g_cons   , "g_cons   "); PL_CHECK; 
   g_frame  = (object_t*)malloc(object_sizeof(err, TYPE_STR)); g_frame ->size=object_sizeof(err, TYPE_STR); g_frame ->type=TYPE_STR; object_str_init(err, g_frame  , "g_frame  "); PL_CHECK; 
   g_lambda = (object_t*)malloc(object_sizeof(err, TYPE_STR)); g_lambda->size=object_sizeof(err, TYPE_STR); g_lambda->type=TYPE_STR; object_str_init(err, g_lambda , "g_lambda "); PL_CHECK; 
-  g_vector = (object_t*)malloc(object_sizeof(err, TYPE_STR)); g_vector->size=object_sizeof(err, TYPE_STR); g_vector->type=TYPE_STR; object_str_init(err, g_vector , "g_vector "); PL_CHECK; 
+  g_mklmd  = (object_t*)malloc(object_sizeof(err, TYPE_STR)); g_mklmd ->size=object_sizeof(err, TYPE_STR); g_mklmd ->type=TYPE_STR; object_str_init(err, g_mklmd  , "g_mklmd  "); PL_CHECK; 
   g_nil    = (object_t*)malloc(object_sizeof(err, TYPE_STR)); g_nil   ->size=object_sizeof(err, TYPE_STR); g_nil   ->type=TYPE_STR; object_str_init(err, g_nil    , "g_nil    "); PL_CHECK; 
   g_define = (object_t*)malloc(object_sizeof(err, TYPE_STR)); g_define->size=object_sizeof(err, TYPE_STR); g_define->type=TYPE_STR; object_str_init(err, g_define , "g_define "); PL_CHECK; 
   g_if     = (object_t*)malloc(object_sizeof(err, TYPE_STR)); g_if    ->size=object_sizeof(err, TYPE_STR); g_if    ->type=TYPE_STR; object_str_init(err, g_if     , "g_if     "); PL_CHECK; 
@@ -72,24 +72,42 @@ object_t *object_tuple_cons_alloc(err_t **err, struct gc_manager_t_decl *gcm, ob
 object_t *object_tuple_cons_get_car(err_t **err, object_t *cons){
   return object_tuple_member_index(err, cons, 0);
 }
+err_t *object_tuple_cons_set_car(err_t **err, object_t *cons, object_t *ar){
+  object_member_set_value(err, cons, 0, ar); PL_CHECK;
+  PL_FUNC_END
+  return *err;
+}
 object_t *object_tuple_cons_get_cdr(err_t **err, object_t *cons){
   return object_tuple_member_index(err, cons, 1);
 }
+err_t *object_tuple_cons_set_cdr(err_t **err, object_t *cons, object_t *dr){
+  object_member_set_value(err, cons, 1, dr); PL_CHECK;
+  PL_FUNC_END
+  return *err;
+}
 
-// lambda:{op_lambda, arg_name:[symbol], exp:ref, code:[ref], env:[cons(symbol,ref)]}
-object_t *object_tuple_lambda_alloc(err_t **err, struct gc_manager_t_decl *gcm, object_t *argname, object_t *exp, object_t *code, object_t *env){
+// lambda:{op_lambda, arg_name:[symbol], exp:ref, code:[ref], env:[symbol]}
+object_t *object_tuple_lambda_alloc(err_t **err, struct gc_manager_t_decl *gcm, object_t *argname, object_t *exp, object_t *code, object_t *envname){
   PL_ASSERT(argname->type == TYPE_SYMBOL, err_typecheck);
   PL_ASSERT(exp->type == TYPE_REF, err_typecheck);
-  PL_ASSERT(env == NULL || env->type == TYPE_REF, err_typecheck);
+  PL_ASSERT(envname != NULL && envname->type == TYPE_SYMBOL, err_typecheck);
   
-  object_t *new_lambda = object_tuple_alloc(err, gcm, 5); PL_CHECK;
+  object_t *new_lambda = object_tuple_alloc(err, gcm, 6); PL_CHECK;
   object_member_set_value(err, new_lambda, 0, g_lambda); PL_CHECK;
   object_member_set_value(err, new_lambda, 1, argname); PL_CHECK;
   object_member_set_value(err, new_lambda, 2, exp); PL_CHECK;
   object_member_set_value(err, new_lambda, 3, code); PL_CHECK;
-  object_member_set_value(err, new_lambda, 4, env); PL_CHECK;
+  object_member_set_value(err, new_lambda, 4, envname); PL_CHECK;
+  object_member_set_value(err, new_lambda, 5, NULL); PL_CHECK;
   PL_FUNC_END_EX(,new_lambda=NULL);
   return new_lambda;
+}
+object_t *object_tuple_lambda_copy(err_t **err, struct gc_manager_t_decl *gcm, object_t *lambda){
+  return object_tuple_lambda_alloc(err, gcm, 
+                                   object_tuple_lambda_get_argname(err, lambda),
+                                   object_tuple_lambda_get_exp(err, lambda),
+                                   object_tuple_lambda_get_code(err, lambda),
+                                   object_tuple_lambda_get_envname(err, lambda));
 }
 int object_tuple_is_lambda(err_t **err, object_t *lambda){
   return object_tuple_member_index(err, lambda, 0) == g_lambda;
@@ -103,11 +121,35 @@ object_t *object_tuple_lambda_get_exp(err_t **err, object_t *lambda){
 object_t *object_tuple_lambda_get_code(err_t **err, object_t *lambda){
   return object_tuple_member_index(err, lambda, 3);
 }
-object_t *object_tuple_lambda_get_env(err_t **err, object_t *lambda){
+object_t *object_tuple_lambda_get_envname(err_t **err, object_t *lambda){
   return object_tuple_member_index(err, lambda, 4);
 }
+object_t *object_tuple_lambda_get_env(err_t **err, object_t *lambda){
+  return object_tuple_member_index(err, lambda, 5);
+}
+err_t *object_tuple_lambda_set_env(err_t **err, object_t *lambda, object_t *env){
+  object_member_set_value(err, lambda, 5, env); PL_CHECK;
+  PL_FUNC_END
+  return *err;
+}
 
-// env:[cons(g_nil,prev_env), cons(symbol,object_t)]
+// env:vector(cons(g_nil,prev_env), cons(symbol,object_t))
+object_t *object_tuple_array_env_vector_alloc(err_t **err, struct gc_manager_t_decl *gcm, object_t *prev_env){
+  object_t *env_vector = NULL;
+  
+  size_t gs = gc_manager_stack_object_get_depth(gcm);
+  gc_manager_stack_object_push(err, gcm, &prev_env); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &env_vector); PL_CHECK;
+  
+  env_vector = gc_manager_object_alloc(err, gcm, TYPE_VECTOR); PL_CHECK;
+  object_vector_init(err, env_vector); PL_CHECK;
+  object_vector_push(err, gcm, env_vector, prev_env); PL_CHECK;
+  
+  PL_FUNC_END_EX(,env_vector=NULL);
+  gc_manager_stack_object_balance(gcm,gs);
+  return env_vector;
+}
+
 // frame:{op_frame, lambda, env:env, stack:vector(ref), pc:int, prev_frame:frame()}
 object_t *object_tuple_frame_alloc(err_t **err, struct gc_manager_t_decl *gcm, object_t *lambda, object_t *env, object_t *prev_frame){
   object_t *item = NULL;
@@ -151,20 +193,20 @@ object_t *object_tuple_frame_get_prev_frame(err_t **err, object_t *frame){
   return object_tuple_member_index(err, frame, 5);
 }
 
-object_ref_part_t *object_tuple_frame_get_current_code(err_t **err, object_t *frame){
-  object_ref_part_t *frame_part = object_as_ref(err, frame); PL_CHECK;
-  object_t *lambda = frame_part[1].ptr;
+object_t *object_tuple_frame_get_code(err_t **err, object_t *frame, int offset){
   
-  object_ref_part_t *lambda_part = object_as_ref(err, lambda); PL_CHECK;
-  object_t *code = lambda_part[3].ptr;
+  object_t *lambda = object_tuple_frame_get_lambda(err, frame); PL_CHECK;
   
-  object_int_part_t *pc = object_member_int(err, frame, 3); PL_CHECK;
+  object_t *code = object_tuple_lambda_get_code(err, lambda); PL_CHECK;
   
-  object_ref_part_t *code_part = object_as_ref(err, code); PL_CHECK;
-  
-  return &code_part[pc->value];
+  object_int_value_t current_pc = object_tuple_frame_get_pc(err, frame)->part._int.value; PL_CHECK;
+    
+  return OBJ_ARR_AT(code, _ref, current_pc + offset).ptr;
   PL_FUNC_END
   return NULL;
+}
+object_t *object_tuple_frame_get_current_code(err_t **err, object_t *frame){
+  return object_tuple_frame_get_code(err, frame, 0);
 }
 
 err_t *object_tuple_frame_set_pc(err_t **err, object_t *frame, long int new_pc){  
@@ -177,5 +219,63 @@ err_t *object_tuple_frame_inc_pc(err_t **err, object_t *frame){
   object_int_part_t *pc = object_member_int(err, frame, 3); PL_CHECK;
   pc->value++;
   PL_FUNC_END
+  return *err;
+}
+// return key-value pair
+object_t *object_tuple_env_resolve(err_t **err, gc_manager_t *gcm, object_t *env, object_t *symbol){
+  size_t gcm_stack_depth;
+  size_t i;
+  object_t *key_value_pair = NULL;
+  object_t *key = NULL;
+  
+  if(env == NULL) {return NULL;}
+  
+  gcm_stack_depth = gc_manager_stack_object_get_depth(gcm);
+  gc_manager_stack_object_push(err, gcm, &env); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &symbol); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &key_value_pair); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &key); PL_CHECK;
+    
+  object_type_check(err, env, TYPE_VECTOR); PL_CHECK;
+  for(i=0; i<env->part._vector.count; i++){
+    key_value_pair = ((object_ref_part_t*)object_vector_index(err, env, (int)i, NULL))->ptr; PL_CHECK;
+    key = object_tuple_cons_get_car(err, key_value_pair); PL_CHECK;
+    if(object_str_eq(key->part._symbol.name, symbol->part._symbol.name)){
+      // found
+      break;
+    }
+  }
+  if(i >= env->part._vector.count){
+    // if not found in current env
+    key_value_pair = object_tuple_frame_resolve(err, gcm, object_vector_ref_index(err, env, 0), symbol);
+  }
+    
+  PL_FUNC_END;
+  gc_manager_stack_object_balance(gcm, gcm_stack_depth);
+  return key_value_pair;
+}
+// return key-value pair
+object_t *object_tuple_frame_resolve(err_t **err, gc_manager_t *gcm, object_t *frame, object_t *symbol){
+   object_t *env = object_tuple_frame_get_env(err, frame);
+   return object_tuple_env_resolve(err, gcm, env, symbol);
+}
+
+err_t *object_tuple_frame_add_env(err_t **err, gc_manager_t *gcm, object_t *frame, object_t *symbol, object_t *value){
+  size_t gcm_stack_depth;
+  object_t *key_value_pair = NULL;
+  object_t *env = NULL;
+  
+  gcm_stack_depth = gc_manager_stack_object_get_depth(gcm);
+  gc_manager_stack_object_push(err, gcm, &symbol); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &value); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &key_value_pair); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &env); PL_CHECK;
+  
+  key_value_pair = object_tuple_cons_alloc(err, gcm, symbol, value); PL_CHECK;
+  env = object_tuple_frame_get_env(err, frame); PL_CHECK;
+  object_vector_push(err, gcm, env, key_value_pair); PL_CHECK;
+  
+  PL_FUNC_END;
+  gc_manager_stack_object_balance(gcm, gcm_stack_depth);
   return *err;
 }

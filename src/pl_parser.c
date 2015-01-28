@@ -388,9 +388,11 @@ object_t *parser_parse_exp(err_t **err, gc_manager_t * gcm, const char *text, si
   size_t p;
   size_t count;
   int is_vector = 0;
+  (void)count;
   
   size_t gs = gc_manager_stack_object_get_depth(gcm);
   gc_manager_stack_object_push(err, gcm, &ret); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &item); PL_CHECK;
   gc_manager_stack_object_push(err, gcm, &item_ref); PL_CHECK;
   
   if(parser_is_space(err, text[*pos])){
@@ -411,9 +413,11 @@ object_t *parser_parse_exp(err_t **err, gc_manager_t * gcm, const char *text, si
   ret = gc_manager_object_alloc(err, gcm, TYPE_VECTOR); PL_CHECK;
   object_vector_init(err, ret); PL_CHECK;
   if(is_vector){
+    item = parser_parse_node_symbol(err, gcm, "vector", 6); PL_CHECK;
+    if(item == NULL) {ret = NULL; goto fin;}
     item_ref = gc_manager_object_alloc(err, gcm, TYPE_REF); PL_CHECK;
-    object_ref_init(err, item_ref, g_vector); PL_CHECK;
-    object_vector_push(err, ret, gcm, item_ref); PL_CHECK;
+    object_ref_init(err, item_ref, item); PL_CHECK;
+    object_vector_push(err, gcm, ret, item_ref); PL_CHECK;
   }
   
   while(1){
@@ -427,15 +431,11 @@ object_t *parser_parse_exp(err_t **err, gc_manager_t * gcm, const char *text, si
     if(item == NULL) {ret = NULL; goto fin;}
     item_ref = gc_manager_object_alloc(err, gcm, TYPE_REF); PL_CHECK;
     object_ref_init(err, item_ref, item); PL_CHECK;
-    object_vector_push(err, ret, gcm, item_ref); PL_CHECK;
+    object_vector_push(err, gcm, ret, item_ref); PL_CHECK;
   }
   
   count = object_vector_count(err, ret);
-  if(count>0){
-    ret = object_vector_to_array(err, ret, gcm); PL_CHECK;
-  }else{
-    ret = g_nil;
-  }
+  ret = object_vector_to_array(err, ret, gcm); PL_CHECK;
   
   *pos = p;
   PL_FUNC_END_EX(gc_manager_stack_object_balance(gcm,gs), ret=NULL);
@@ -454,6 +454,7 @@ err_t *parser_verbose(err_t **err, object_t *exp){
   if(exp == NULL) {goto fin;}
   
   count = object_array_count(err, exp); PL_CHECK;
+  if(count == 0) {printf("()"); goto fin;}
   switch(exp->type){
     case TYPE_REF:
       ref_part = object_as_ref(err, exp); PL_CHECK;
@@ -473,7 +474,7 @@ err_t *parser_verbose(err_t **err, object_t *exp){
     case TYPE_SYMBOL:
       symbol_part = object_as_symbol(err, exp);
       for(i=0; i<count; i++){
-        str_part = object_as_str(err, symbol_part->name);
+        str_part = object_as_str(err, symbol_part[i].name);
         printf("$%s ", str_part->str);
       }
       break;

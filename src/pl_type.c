@@ -101,6 +101,7 @@ err_t *object_halt(err_t **err, object_t *obj){
   case TYPE_GC_BROKEN:
   case TYPE_REF:
   case TYPE_VECTOR:
+  case TYPE_UNKNOW:
     break;
   default:
     PL_ASSERT(0, err_typecheck);
@@ -154,10 +155,10 @@ err_t *object_part_halt(err_t **err, void *part, enum_object_type_t type){
 //   object_int_part_t       *int_part       = (object_int_part_t       *)part;
 //   object_float_part_t     *float_part     = (object_float_part_t     *)part;
   object_str_part_t       *str_part       = (object_str_part_t       *)part;
-//   object_symbol_part_t    *symbol_part    = (object_symbol_part_t    *)part;
-//   object_gc_broken_part_t *gc_broken_part = (object_gc_broken_part_t *)part;
-//   object_vector_part_t    *vector_part    = (object_vector_part_t    *)part;
-//   object_ref_part_t       *ref_part       = (object_ref_part_t       *)part;
+  object_symbol_part_t    *symbol_part    = (object_symbol_part_t    *)part;
+  object_gc_broken_part_t *gc_broken_part = (object_gc_broken_part_t *)part;
+  object_vector_part_t    *vector_part    = (object_vector_part_t    *)part;
+  object_ref_part_t       *ref_part       = (object_ref_part_t       *)part;
   
   switch(type){
   case TYPE_RAW:
@@ -168,12 +169,21 @@ err_t *object_part_halt(err_t **err, void *part, enum_object_type_t type){
   case TYPE_STR:
     free(str_part->str);
     break;
+  case TYPE_REF:
+    ref_part->ptr = NULL;
+    break;
+  case TYPE_VECTOR:
+    vector_part->count = 0;
+    vector_part->pdata = NULL;
+    break;
+  case TYPE_SYMBOL:
+    symbol_part->name = NULL;
+    break;
+  case TYPE_GC_BROKEN:
+    gc_broken_part->ptr = NULL;
+    break;
   case TYPE_INT:
   case TYPE_FLOAT:
-  case TYPE_SYMBOL:
-  case TYPE_GC_BROKEN:
-  case TYPE_REF:
-  case TYPE_VECTOR:
     break;
   default:
     PL_ASSERT(0, err_typecheck);
@@ -295,6 +305,7 @@ size_t object_sizeof_part(err_t **err, enum_object_type_t obj_type){
   case TYPE_GC_BROKEN: return sizeof(object_gc_broken_part_t);
   case TYPE_VECTOR:    return sizeof(object_vector_part_t);
   case TYPE_REF:       return sizeof(object_ref_part_t);
+  case TYPE_UNKNOW:    return 0;
   default:             break;
   }
   PL_ASSERT(0, err_typecheck);
@@ -311,52 +322,24 @@ size_t object_sizeof(err_t **err, enum_object_type_t obj_type){
 }
 
 size_t object_array_count(err_t **err, object_t *obj){
-  PL_ASSERT_EX(obj!=NULL, err_null(PL_ERR_DEFAULT_ARGS), return 0);
+  if(obj == NULL) {return 0;}
   
   size_t value_size = obj->size - sizeof(object_header_t);
-  return value_size / object_sizeof_part(err, obj->type);
+  return value_size==0 ? 0 : value_size / object_sizeof_part(err, obj->type);
 }
 void* object_array_index(err_t **err, object_t *obj, size_t index){
-  PL_ASSERT_EX(obj!=NULL, err_null(PL_ERR_DEFAULT_ARGS), return NULL);
+  PL_ASSERT_NOT_NULL(obj);
   size_t obj_addr = (size_t)obj;
   size_t ret_addr = obj_addr + sizeof(object_header_t) + index * object_sizeof_part(err, obj->type);
   if(ret_addr >= obj_addr + obj->size) {return NULL;}
   
+  PL_FUNC_END_EX(,ret_addr=0);
   return (void*)ret_addr;
 }
 
 
 
 // object vecter
-err_t *object_vector_part_push(err_t **err, object_vector_part_t *vector_part, struct gc_manager_t_decl *gcm, object_t *item){
-  object_t *new_data = NULL;
-  void *src = NULL;
-  void *dst = NULL;
-  size_t max_count;
-  
-  // able to chage type with size == 0
-  if(vector_part->count == 0){
-    vector_part->pdata = gc_manager_object_array_alloc(err, gcm, item->type, 1); PL_CHECK;
-  }else{
-    // type check
-    PL_ASSERT(vector_part->pdata->type == item->type, err_typecheck);
-    
-    max_count = object_array_count(err, vector_part->pdata); PL_CHECK;
-    // extend pdata
-    if(vector_part->count+1 > max_count){
-      new_data = gc_manager_object_array_expand(err, gcm, vector_part->pdata, max_count * 2); PL_CHECK;
-      vector_part->pdata = new_data;
-    }
-  }
-  src = object_array_index(err, item, 0); PL_CHECK;
-  dst = object_array_index(err, vector_part->pdata, vector_part->count); PL_CHECK;
-  object_part_move(err, src, dst, vector_part->pdata->type); PL_CHECK;
-  
-  vector_part->count++;
-  
-  PL_FUNC_END
-  return *err;
-}
 err_t *object_vector_part_pop(err_t **err, object_vector_part_t *vector_part, object_t *dest){
   void *src_part = NULL;
   void *dst_part = NULL;
@@ -373,6 +356,7 @@ err_t *object_vector_part_pop(err_t **err, object_vector_part_t *vector_part, ob
   }
   
   object_part_halt(err, src_part, vector_part->pdata->type); PL_CHECK;
+  
   if(vector_part->count == 0){
     vector_part->pdata = NULL;
   }
@@ -423,6 +407,19 @@ void *object_vector_part_index(err_t **err, object_vector_part_t *vector_part, i
   PL_FUNC_END
   return src_part;
 }
+static object_t *object_vector_part_ref_index(err_t **err, object_vector_part_t *vector_part, int index){
+  object_t *ptr = NULL;
+  if(index<0) {index = (int)vector_part->count + index;}
+  
+  if(vector_part->pdata != NULL){
+    // type check
+    object_type_check(err, vector_part->pdata, TYPE_REF); PL_CHECK;
+    ptr = OBJ_ARR_AT(vector_part->pdata, _ref, index).ptr;
+  }
+  
+  PL_FUNC_END_EX(, ptr=NULL)
+  return ptr;
+}
 enum_object_type_t object_vector_part_type(err_t **err, object_vector_part_t *vector_part){
   (void)err;
   if(vector_part->pdata == NULL){
@@ -431,15 +428,42 @@ enum_object_type_t object_vector_part_type(err_t **err, object_vector_part_t *ve
   return vector_part->pdata->type;
 }
 
-err_t *object_vector_push(err_t **err, object_t *vec, struct gc_manager_t_decl *gcm, object_t *item){
+err_t *object_vector_push(err_t **err, struct gc_manager_t_decl *gcm, object_t *vec, object_t *item){
   size_t gs;
+  size_t max_count;
+  void *src;
+  void *dst;
+  object_t *new_data = NULL;
   
   if(item == NULL) {return *err;}
   gs = gc_manager_stack_object_get_depth(gcm);
-  
   gc_manager_stack_object_push(err, gcm, &vec); PL_CHECK;
-  gc_manager_object_reserve(err, gcm, object_sizeof(err, item->type)); PL_CHECK;
-  object_vector_part_push(err, object_as_vector(err, vec), gcm, item); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &item); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &new_data); PL_CHECK;
+  
+  object_type_check(err, vec, TYPE_VECTOR); PL_CHECK;
+  
+  // able to chage type with size == 0
+  if(vec->part._vector.count == 0){
+    new_data = gc_manager_object_array_alloc(err, gcm, item->type, 1); PL_CHECK;
+    vec->part._vector.pdata = new_data;
+  }else{
+    // type check
+    object_type_check(err, vec->part._vector.pdata, item->type); PL_CHECK;
+    
+    max_count = object_array_count(err, vec->part._vector.pdata); PL_CHECK;
+    // extend pdata
+    if(vec->part._vector.count+1 > max_count){
+      new_data = gc_manager_object_array_expand(err, gcm, vec->part._vector.pdata, max_count * 2); PL_CHECK;
+      vec->part._vector.pdata = new_data;
+    }
+  }
+  src = object_array_index(err, item, 0); PL_CHECK;
+  dst = object_array_index(err, vec->part._vector.pdata, vec->part._vector.count); PL_CHECK;
+  object_part_move(err, src, dst, vec->part._vector.pdata->type); PL_CHECK;
+  
+  vec->part._vector.count++;
+  
   PL_FUNC_END_EX(gc_manager_stack_object_balance(gcm,gs),);
   return *err;
 }
@@ -471,6 +495,13 @@ void *object_vector_index(err_t **err, object_t *vec, int index, object_t *dest)
   PL_FUNC_END
   return ret;
 }
+object_t *object_vector_ref_index(err_t **err, object_t *vec, int index){
+  void *ret = NULL;
+  object_vector_part_t *vector_part = object_as_vector(err, vec); PL_CHECK;
+  ret = object_vector_part_ref_index(err, vector_part, index); PL_CHECK;
+  PL_FUNC_END
+  return ret;
+}
 enum_object_type_t object_vector_type(err_t **err, object_t *vec){
   enum_object_type_t ret;
   object_vector_part_t *vector_part = object_as_vector(err, vec); PL_CHECK;
@@ -484,6 +515,14 @@ size_t object_vector_count(err_t **err, object_t *vec){
   return vector_part->count;
 }
 
+// object str
+int object_str_eq(object_t *s1, object_t *s2){
+  if(s1==s2) {return 1;}
+  if(s1==NULL || s2==NULL) {return 0;}
+  if(s1->type != TYPE_STR || s2->type != TYPE_STR) {return 0;}
+  if(s1->part._str.size != s2->part._str.size) {return 0;}
+  return strncmp(s1->part._str.str, s2->part._str.str, s1->part._str.size) == 0;
+}
 
 // verbose
 static size_t print_indentation(size_t indentation){
@@ -631,6 +670,7 @@ err_t *object_mark(err_t **err, object_t *obj, size_t mark, size_t limit){
   
   count = object_array_count(err, obj); PL_CHECK
   if(limit<count) {count = limit;}
+  if(count == 0) {goto fin;}
   
   switch(obj->type){
   case TYPE_RAW:
@@ -674,6 +714,7 @@ err_t *object_move(err_t **err, object_t *obj_old, object_t *obj_new){
   if(obj_old != obj_new){
     memmove(obj_new, obj_old, obj_old->size);
   }
+  obj_new->move_dest = NULL;
   PL_FUNC_END
   return *err;
 }
@@ -688,48 +729,34 @@ err_t *object_part_move(err_t **err, void *part_src, void *part_dst, enum_object
   return *err;
 }
 
-
-err_t *obj_ptr_fix_gc_broken(err_t **err, object_t **pobj){
+err_t *object_ptr_gc_relink(err_t **err, object_t **pobj){
   PL_ASSERT_NOT_NULL(pobj);
-  if(*pobj == NULL) {return *err;}
-  
-  object_gc_broken_part_t *broken_value = NULL;
-  
-  if((*pobj)->type == TYPE_GC_BROKEN){
-    broken_value = object_as_gc_broken(err, *pobj);
-    PL_ASSERT_NOT_NULL(broken_value);
-    *pobj = broken_value->ptr;
-  }
+  if(*pobj == NULL) {goto fin;}
+  *pobj = (*pobj)->move_dest;
   PL_FUNC_END
   return *err;
 }
-err_t *object_fix_gc_broken(err_t **err, object_t *obj){
-  object_symbol_part_t *symbol_part = NULL;
-  object_vector_part_t *vector_part = NULL;
-  object_ref_part_t *ref_part = NULL;
+err_t *object_gc_relink(err_t **err, object_t *obj){
   size_t count;
   
   PL_ASSERT_NOT_NULL(obj);
   count = object_array_count(err, obj); PL_CHECK;
-  if(count == 0) {return *err;}
+  if(count == 0) {goto fin;}
 
   switch(obj->type){
   case TYPE_SYMBOL:
-    symbol_part = object_as_symbol(err, obj); PL_CHECK;
     while(count-->0){
-      obj_ptr_fix_gc_broken(err, &(symbol_part[count].name)); PL_CHECK;
+      object_ptr_gc_relink(err, &(OBJ_ARR_AT(obj, _symbol, count).name)); PL_CHECK;
     }
     break;
-  case TYPE_REF:    
-    ref_part = object_as_ref(err, obj); PL_CHECK;
+  case TYPE_REF:
     while(count-->0){
-      obj_ptr_fix_gc_broken(err, &(ref_part[count].ptr)); PL_CHECK;
+      object_ptr_gc_relink(err, &(OBJ_ARR_AT(obj, _ref, count).ptr)); PL_CHECK;
     }
     break;
   case TYPE_VECTOR:
-    vector_part = object_as_vector(err, obj); PL_CHECK;
     while(count-->0){
-      obj_ptr_fix_gc_broken(err, &(vector_part[count].pdata)); PL_CHECK;
+      object_ptr_gc_relink(err, &(OBJ_ARR_AT(obj, _vector, count).pdata)); PL_CHECK;
     }
     break;
   case TYPE_RAW:
@@ -742,6 +769,60 @@ err_t *object_fix_gc_broken(err_t **err, object_t *obj){
   PL_FUNC_END
   return *err;
 }
+
+// err_t *obj_ptr_fix_gc_broken(err_t **err, object_t **pobj){
+//   PL_ASSERT_NOT_NULL(pobj);
+//   if(*pobj == NULL) {return *err;}
+//   
+//   object_gc_broken_part_t *broken_value = NULL;
+//   
+//   if((*pobj)->type == TYPE_GC_BROKEN){
+//     broken_value = object_as_gc_broken(err, *pobj);
+//     PL_ASSERT_NOT_NULL(broken_value);
+//     *pobj = broken_value->ptr;
+//   }
+//   PL_FUNC_END
+//   return *err;
+// }
+// err_t *object_fix_gc_broken(err_t **err, object_t *obj){
+//   object_symbol_part_t *symbol_part = NULL;
+//   object_vector_part_t *vector_part = NULL;
+//   object_ref_part_t *ref_part = NULL;
+//   size_t count;
+//   
+//   PL_ASSERT_NOT_NULL(obj);
+//   count = object_array_count(err, obj); PL_CHECK;
+//   if(count == 0) {return *err;}
+// 
+//   switch(obj->type){
+//   case TYPE_SYMBOL:
+//     symbol_part = object_as_symbol(err, obj); PL_CHECK;
+//     while(count-->0){
+//       obj_ptr_fix_gc_broken(err, &(symbol_part[count].name)); PL_CHECK;
+//     }
+//     break;
+//   case TYPE_REF:    
+//     ref_part = object_as_ref(err, obj); PL_CHECK;
+//     while(count-->0){
+//       obj_ptr_fix_gc_broken(err, &(ref_part[count].ptr)); PL_CHECK;
+//     }
+//     break;
+//   case TYPE_VECTOR:
+//     vector_part = object_as_vector(err, obj); PL_CHECK;
+//     while(count-->0){
+//       obj_ptr_fix_gc_broken(err, &(vector_part[count].pdata)); PL_CHECK;
+//     }
+//     break;
+//   case TYPE_RAW:
+//   case TYPE_INT:
+//   case TYPE_FLOAT:
+//   case TYPE_STR:
+//   default:
+//     break;
+//   }
+//   PL_FUNC_END
+//   return *err;
+// }
 
 
 err_t *object_ptr_rebase(err_t **err, object_t **pobj, object_t *old_pool, size_t old_pool_size, object_t *new_pool){
@@ -756,7 +837,7 @@ err_t *object_ptr_rebase(err_t **err, object_t **pobj, object_t *old_pool, size_
   if(pobj_addr<old_pool_addr || old_pool_end_addr<=pobj_addr) {return 0;}
   
   new_pobj_addr = pobj_addr - old_pool_addr + new_pool_addr;
-  
+
   *pobj = (object_t*)new_pobj_addr;
   
   PL_FUNC_END
@@ -764,6 +845,8 @@ err_t *object_ptr_rebase(err_t **err, object_t **pobj, object_t *old_pool, size_
 }
 
 err_t *object_rebase(err_t **err, object_t *obj, object_t *old_pool, size_t old_pool_size, object_t *new_pool){
+  
+  
   object_symbol_part_t *symbol_part = NULL;
   object_vector_part_t *vector_part = NULL;
   object_ref_part_t *ref_part = NULL;

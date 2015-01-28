@@ -58,11 +58,11 @@ int main(int argc, char *argv[]) {
   gc_manager_stack_object_push(err, gc_manager, &vec1);
   object_vector_init(err, vec1); PL_CHECK;
   
-  object_vector_push(err, vec1, gc_manager, i1);
+  object_vector_push(err, gc_manager, vec1, i1);
   object_vector_top(err, vec1, i1);
-  object_vector_push(err, vec1, gc_manager, i1);
+  object_vector_push(err, gc_manager, vec1, i1);
   object_vector_pop(err, vec1, NULL);
-  object_vector_push(err, vec1, gc_manager, i1);
+  object_vector_push(err, gc_manager, vec1, i1);
   object_vector_pop(err, vec1, NULL);
   object_vector_pop(err, vec1, NULL);
   object_vector_pop(err, vec1, NULL);
@@ -82,13 +82,13 @@ int main(int argc, char *argv[]) {
   object_t *parsed_exp;
   object_t *parsed_exp_code; 
   
-  parsed_exp = parser_parse_node(err, gc_manager, "(;;; The FACT procedure computes the factorial \n\
+  parsed_exp = parser_parse_exp(err, gc_manager, "((lambda () (;;; The FACT procedure computes the factorial \n\
 ;;; of a non-negative integer.\n\
 (define fact\n\
   (lambda (n)\n\
     (if (= n 0)\n\
         1        ;Base case: return 1\n\
-        (* n (fact (- n 1)))))))", &pos);
+        (* n (fact (- n 1)))))))))", &pos);
   parser_verbose(err, parsed_exp); PL_CHECK;
   printf("\n === end === \n\n");
   
