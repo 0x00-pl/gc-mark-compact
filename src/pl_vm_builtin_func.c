@@ -225,7 +225,7 @@ err_t *vm_step_op_call_addi(err_t **err, gc_manager_t *gcm, object_t *vm, object
     
   
   for(i=1; i<args_count; i++){
-    value = object_vector_ref_index(err, stack, i-args_count); PL_CHECK;
+    value = object_vector_ref_index(err, stack, (int)i-(int)args_count); PL_CHECK;
     object_vector_pop(err, stack); PL_CHECK;
     object_type_check(err, value, TYPE_INT); PL_CHECK;
     sum += value->part._int.value;

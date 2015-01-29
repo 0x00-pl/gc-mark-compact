@@ -15,7 +15,6 @@ const char *object_typename(enum_object_type_t type){
   case TYPE_FLOAT     : return "TYPE_FLOAT";
   case TYPE_STR       : return "TYPE_STR";
   case TYPE_SYMBOL    : return "TYPE_SYMBOL";
-  case TYPE_GC_BROKEN : return "TYPE_GC_BROKEN";
   case TYPE_VECTOR    : return "TYPE_VECTOR";
   case TYPE_REF       : return "TYPE_REF";
   default             : return "TYPE_UNKNOW";
@@ -193,19 +192,10 @@ err_t *object_halt(err_t **err, object_t *obj){
 
 
 // object cast
-
 err_t *object_type_check(err_t **err, object_t *obj, enum_object_type_t type){
   PL_ASSERT(obj!=NULL && obj->type == type, err_typecheck);
   PL_FUNC_END
   return *err;
-}
-
-void* object_part(err_t **err, object_t *obj){
-  (void)err;
-  if(obj==NULL) {return NULL;}
-//   size_t obj_addr = (size_t)obj;
-//   return (void*)(obj_addr + sizeof(object_header_t));
-  return &(obj->part._unknow);
 }
 
 
@@ -218,7 +208,6 @@ object_t *object_tuple_alloc(err_t **err, gc_manager_t *gcm, size_t size){
 
 
 // object size
-
 size_t object_sizeof_part(err_t **err, enum_object_type_t obj_type){
   switch(obj_type){
   case TYPE_RAW:       return sizeof(object_raw_part_t);
@@ -226,7 +215,6 @@ size_t object_sizeof_part(err_t **err, enum_object_type_t obj_type){
   case TYPE_FLOAT:     return sizeof(object_float_part_t);
   case TYPE_STR:       return sizeof(object_str_part_t);
   case TYPE_SYMBOL:    return sizeof(object_symbol_part_t);
-  case TYPE_GC_BROKEN: return sizeof(object_gc_broken_part_t);
   case TYPE_VECTOR:    return sizeof(object_vector_part_t);
   case TYPE_REF:       return sizeof(object_ref_part_t);
   case TYPE_UNKNOW:    return 0;
@@ -497,7 +485,6 @@ err_t *object_mark(err_t **err, object_t *obj, size_t mark, size_t limit){
     
   case TYPE_REF:
     while(count-->0){
-//       printf("[debug] mark %zu ref %p\n ", count, OBJ_ARR_AT(obj, _ref, count).ptr);
       object_mark(err, OBJ_ARR_AT(obj, _ref, count).ptr, mark, UINT_MAX); PL_CHECK;
     }
     break;
@@ -522,24 +509,11 @@ err_t *object_move(err_t **err, object_t *obj_old, object_t *obj_new){
   PL_ASSERT_NOT_NULL(obj_new);
   if(obj_old != obj_new){
     memmove(obj_new, obj_old, obj_old->size);
-//    printf("[debug] move %p to %p size %zu\n", obj_old, obj_new, obj_old->size);
   }
   obj_new->move_dest = NULL;
   PL_FUNC_END
   return *err;
 }
-// err_t *object_part_move(err_t **err, void *part_src, void *part_dst, enum_object_type_t type){
-//   //TODO replace this with object_copy_nth() and delete this function
-//   size_t copy_size = object_sizeof_part(err, type); PL_CHECK;
-//   PL_ASSERT_NOT_NULL(part_src);
-//   PL_ASSERT_NOT_NULL(part_dst);
-//   if(part_src != part_dst){
-//     memmove(part_dst, part_src, copy_size);
-//     printf("[debug] part move %p to %p size %zu\n", part_src, part_dst, copy_size);
-//   }
-//   PL_FUNC_END
-//   return *err;
-// }
 
 err_t *object_ptr_gc_relink(err_t **err, object_t **pobj){
   PL_ASSERT_NOT_NULL(pobj);
@@ -582,61 +556,6 @@ err_t *object_gc_relink(err_t **err, object_t *obj){
   PL_FUNC_END
   return *err;
 }
-
-// err_t *obj_ptr_fix_gc_broken(err_t **err, object_t **pobj){
-//   PL_ASSERT_NOT_NULL(pobj);
-//   if(*pobj == NULL) {return *err;}
-//   
-//   object_gc_broken_part_t *broken_value = NULL;
-//   
-//   if((*pobj)->type == TYPE_GC_BROKEN){
-//     broken_value = object_as_gc_broken(err, *pobj);
-//     PL_ASSERT_NOT_NULL(broken_value);
-//     *pobj = broken_value->ptr;
-//   }
-//   PL_FUNC_END
-//   return *err;
-// }
-// err_t *object_fix_gc_broken(err_t **err, object_t *obj){
-//   object_symbol_part_t *symbol_part = NULL;
-//   object_vector_part_t *vector_part = NULL;
-//   object_ref_part_t *ref_part = NULL;
-//   size_t count;
-//   
-//   PL_ASSERT_NOT_NULL(obj);
-//   count = object_array_count(err, obj); PL_CHECK;
-//   if(count == 0) {return *err;}
-// 
-//   switch(obj->type){
-//   case TYPE_SYMBOL:
-//     symbol_part = object_as_symbol(err, obj); PL_CHECK;
-//     while(count-->0){
-//       obj_ptr_fix_gc_broken(err, &(symbol_part[count].name)); PL_CHECK;
-//     }
-//     break;
-//   case TYPE_REF:    
-//     ref_part = object_as_ref(err, obj); PL_CHECK;
-//     while(count-->0){
-//       obj_ptr_fix_gc_broken(err, &(ref_part[count].ptr)); PL_CHECK;
-//     }
-//     break;
-//   case TYPE_VECTOR:
-//     vector_part = object_as_vector(err, obj); PL_CHECK;
-//     while(count-->0){
-//       obj_ptr_fix_gc_broken(err, &(vector_part[count].pdata)); PL_CHECK;
-//     }
-//     break;
-//   case TYPE_RAW:
-//   case TYPE_INT:
-//   case TYPE_FLOAT:
-//   case TYPE_STR:
-//   default:
-//     break;
-//   }
-//   PL_FUNC_END
-//   return *err;
-// }
-
 
 err_t *object_ptr_rebase(err_t **err, object_t **pobj, object_t *old_pool, size_t old_pool_size, object_t *new_pool){
   PL_ASSERT_NOT_NULL(old_pool);

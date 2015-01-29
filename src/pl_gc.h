@@ -18,10 +18,11 @@ typedef struct gc_manager_t_decl{
   object_t ***stack_pobject_pool;
   size_t stack_pobject_pool_count;
   size_t stack_pobject_pool_maxcount;
+  
+  size_t cur_mark;
 } gc_manager_t;
 err_t *gc_manager_init(err_t **err, gc_manager_t *manager);
 err_t *gc_manager_halt(err_t **err, gc_manager_t *manager);
-object_t *gc_manager_root(gc_manager_t *manager);
 
 
 void *mem_pack(void *ptr);

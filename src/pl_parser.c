@@ -472,12 +472,9 @@ err_t *parser_verbose(err_t **err, object_t *exp){
     case TYPE_SYMBOL:
       for(i=0; i<count; i++){
         str = OBJ_ARR_AT(exp, _symbol, i).name;
-        if(str==NULL) {
-          printf("[debug]");
-        }else{
-          object_type_check(err, str, TYPE_STR); PL_CHECK;
-          printf("$%s ", str->part._str.str);
-        }
+        PL_ASSERT_NOT_NULL(str);
+        object_type_check(err, str, TYPE_STR); PL_CHECK;
+        printf("$%s ", str->part._str.str);
       }
       break;
     case TYPE_INT:

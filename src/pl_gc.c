@@ -19,13 +19,9 @@ err_t *gc_manager_init(err_t **err, gc_manager_t *manager){
   manager->object_pool_size = 0;
   
   manager->object_count = 0;
+      
+  manager->cur_mark = 0;
   
-  // root object
-  gc_manager_object_alloc(err, manager, TYPE_REF); PL_CHECK;
-    
-  manager->object_pool->mark = 1;
-  
-  PL_FUNC_END
   return *err;
 }
 
@@ -44,11 +40,6 @@ err_t *gc_manager_halt(err_t **err, gc_manager_t *manager){
   PL_FUNC_END
   return *err;
 }
-
-object_t *gc_manager_root(gc_manager_t *manager){
-  return &manager->object_pool[0];
-}
-
 
 void *mem_pack(void *ptr){
   size_t address= (size_t)ptr;
@@ -123,36 +114,6 @@ err_t *gc_manager_object_pool_resize(err_t **err, gc_manager_t *manager, size_t 
   free(old_object_pool);
   return *err;
 }
-// err_t *gc_manager_object_pool_resize(err_t **err, gc_manager_t *manager, size_t new_size){
-//   object_t *iter;
-//   object_t *new_object_pool= NULL;
-//   object_t *old_object_pool= NULL;
-//   size_t old_object_pool_size= NULL;
-//   size_t new_maxsize;
-//   size_t i;
-//   
-//   old_object_pool = manager->object_pool;
-//   old_object_pool_size = manager->object_pool_size;
-//   
-//   
-//   new_object_pool = (object_t*)malloc(new_maxsize);
-//   PL_ASSERT_NOT_NULL(new_object_pool);
-//   
-//   memmove(new_object_pool, manager->object_pool, manager->object_pool_size);
-//   manager->object_pool = new_object_pool;
-//   manager->object_pool_maxsize = new_maxsize;
-//   
-//   for(iter=manager->object_pool; iter<gc_manager_object_pool_end(err, manager); iter=gc_object_next(iter)){
-//     object_rebase(err, iter, old_object_pool, old_object_pool_size, new_object_pool); PL_CHECK;
-//   }
-//   for(i=0; i<manager->stack_pobject_pool_count; i++){
-//     object_ptr_rebase(err, manager->stack_pobject_pool[i], old_object_pool, old_object_pool_size, new_object_pool); PL_CHECK;
-//   }
-//   
-//   free(old_object_pool);
-//   PL_FUNC_END
-//   return *err;
-// }
 
 object_t *gc_manager_object_array_alloc(err_t **err, gc_manager_t *manager, enum_object_type_t obj_type, size_t count){
   object_t *new_object= NULL;
@@ -263,19 +224,14 @@ object_t *gc_manager_object_array_slice(err_t **err, gc_manager_t *gcm, object_t
 
 err_t *gc_manager_mark(err_t **err, gc_manager_t *manager){
   size_t i;
-  size_t new_mark = manager->object_pool[0].mark + 1;
-  object_mark(err, &manager->object_pool[0], new_mark, UINT_MAX); PL_CHECK
+  manager->cur_mark++;
+  //object_mark(err, &manager->object_pool[0], new_mark, UINT_MAX); PL_CHECK
   for(i=0; i<manager->stack_pobject_pool_count; i++){
-    object_mark(err, *manager->stack_pobject_pool[i], new_mark, UINT_MAX); PL_CHECK;
+    object_mark(err, *manager->stack_pobject_pool[i], manager->cur_mark, UINT_MAX); PL_CHECK;
   }
   PL_FUNC_END
   return *err;
 }
-
-// static object_t *gc_manager_shadow_object_pool_alloc(err_t **err, gc_manager_t *manager){
-//   (void)err;
-//   return (object_t*)malloc(manager->object_pool_size);
-// }
 
 err_t *gc_manager_compact(err_t **err, gc_manager_t *manager, object_t *compact_dest, size_t dest_pool_size){
   size_t i;
@@ -283,17 +239,20 @@ err_t *gc_manager_compact(err_t **err, gc_manager_t *manager, object_t *compact_
   object_t *iter = NULL;
   object_t *move_dest = NULL;
   object_t *iter_end = NULL;
-  size_t mark;
+  size_t cur_mark;
   
-  mark = manager->object_pool[0].mark;
+  cur_mark = manager->cur_mark;
   
-  if(compact_dest==NULL) {compact_dest =  manager->object_pool;}
+  if(compact_dest==NULL) {
+    compact_dest =  manager->object_pool;
+    dest_pool_size = manager->object_pool_maxsize;
+  }
   new_end = compact_dest;
   
   iter_end = gc_manager_object_pool_end(err, manager); PL_CHECK;
   // fill move_dest
   for(iter=manager->object_pool; iter<iter_end; iter=gc_object_next(iter)){
-    if(iter->mark != mark) {
+    if(iter->mark != cur_mark){
       continue;
     }
     iter->move_dest = new_end;
@@ -301,7 +260,7 @@ err_t *gc_manager_compact(err_t **err, gc_manager_t *manager, object_t *compact_
   }
   // relink ptr
   for(iter=manager->object_pool; iter<iter_end; iter=gc_object_next(iter)){
-    if(iter->mark != mark) {
+    if(iter->mark != cur_mark) {
       continue;
     }
     object_gc_relink(err, iter); PL_CHECK;
@@ -312,7 +271,7 @@ err_t *gc_manager_compact(err_t **err, gc_manager_t *manager, object_t *compact_
   }
   // move object
   for(iter=manager->object_pool; iter<iter_end; iter=gc_object_next(iter)){
-    if(iter->mark != mark) {
+    if(iter->mark != cur_mark) {
       manager->object_count--;
       object_halt(err, iter); PL_CHECK;
       continue;
@@ -321,72 +280,16 @@ err_t *gc_manager_compact(err_t **err, gc_manager_t *manager, object_t *compact_
     object_move(err, iter, move_dest); PL_CHECK;
   }
   
-  if(compact_dest != manager->object_pool) {manager->object_pool_maxsize = dest_pool_size;}
+  
   manager->object_pool = compact_dest;
+  manager->object_pool_maxsize = dest_pool_size;
   manager->object_pool_size = gc_object_offset(compact_dest, new_end);
+  
+  PL_ASSERT(manager->object_pool_size<dest_pool_size, err_out_of_range);
   
   PL_FUNC_END
   return *err;
 }
-// err_t *gc_manager_compact(err_t **err, gc_manager_t *manager){
-//    
-//   object_t *new_end;
-//   object_t *iter = NULL;
-//   object_t *next_iter = NULL;
-//   object_t *iter_end = NULL;
-//   object_t *shadow_object = NULL;
-//   object_t *shadow_pool = NULL;
-//   object_gc_broken_part_t *broken_value = NULL;
-//   size_t object_pool_size = 0;
-//   size_t mark;
-//   size_t i;
-//   
-//   object_pool_size = manager->object_pool_size;
-//   mark = manager->object_pool[0].mark;
-//   new_end = manager->object_pool;
-//   shadow_pool = gc_manager_shadow_object_pool_alloc(err, manager);  PL_CHECK;
-//   iter_end = gc_manager_object_pool_end(err, manager);
-//   for(iter=manager->object_pool; iter<iter_end; iter=next_iter){
-//     next_iter = gc_object_next(iter); // move object will break old object
-//     
-//     if(iter->mark != mark) {
-//       manager->object_count--;
-//       object_halt(err, iter); PL_CHECK;
-//       continue;
-//     }
-//     
-//     object_rebase(err, iter, manager->object_pool, object_pool_size, shadow_pool); PL_CHECK 
-//     
-//     // fill shadow_pool
-//     shadow_object = iter;
-//     object_ptr_rebase(err, &shadow_object, manager->object_pool, object_pool_size, shadow_pool); PL_CHECK 
-//     
-//     shadow_object->size = object_sizeof(err, TYPE_GC_BROKEN);
-//     shadow_object->type = TYPE_GC_BROKEN;
-//     broken_value = (object_gc_broken_part_t*)object_part(err, shadow_object);  PL_CHECK;
-//     
-//     object_move(err, iter, new_end); // may break iter, ***DO NOT USE iter AFTER***
-//     broken_value->ptr= new_end;
-//     
-//     new_end = gc_object_next(new_end);
-//   }
-//   
-//   manager->object_pool_size = gc_object_offset(manager->object_pool, new_end);
-//   
-//   for(iter=manager->object_pool; iter<gc_manager_object_pool_end(err, manager); iter=gc_object_next(iter)){
-//     object_fix_gc_broken(err, iter);PL_CHECK 
-//   }
-//   
-//   for(i=0; i<manager->stack_pobject_pool_count; i++){
-//     object_ptr_rebase(err, manager->stack_pobject_pool[i], manager->object_pool, object_pool_size, shadow_pool); PL_CHECK;
-//     obj_ptr_fix_gc_broken(err, manager->stack_pobject_pool[i]); PL_CHECK;
-//   }
-//   
-//   PL_FUNC_END
-//   printf("===%p\n",shadow_pool);
-//   free(shadow_pool);
-//   return *err;
-// }
 
 err_t *gc_gc(err_t **err, gc_manager_t *manager){
   gc_manager_mark(err, manager);  

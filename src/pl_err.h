@@ -37,12 +37,7 @@ err_t *err_out_of_range(err_t **err, const char *file, size_t line, const char *
 err_t *err_parsing(err_t **err, const char *file, size_t line, const char *extra_message);
 err_t *err_testing(err_t **err, const char *file, size_t line, const char *extra_message);
 
-// static int pass(const char *p, ...){(void)p;return 0;}
-// 
-// #define dbgp pass //printf  //[debug]
 
-
-// #define PL_PRINT_LOCATION printf("at file: %s line: %d \n\n", __FILE__, __LINE__)
 
 #define PL_ERR_DEFAULT_ARGS err,__FILE__,__LINE__,NULL
 #define PL_ERR_DEFAULT_MSG_ARGS(msg) err,__FILE__,__LINE__,msg

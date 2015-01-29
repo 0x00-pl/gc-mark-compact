@@ -11,7 +11,6 @@ enum type_e{
   TYPE_FLOAT,
   TYPE_STR,
   TYPE_SYMBOL,
-  TYPE_GC_BROKEN,
   TYPE_REF,
   TYPE_VECTOR,
   TYPE_UNKNOW
@@ -49,10 +48,6 @@ typedef struct{
 } object_symbol_part_t;
 
 typedef struct{
-  struct object_t_decl *ptr;
-} object_gc_broken_part_t;
-
-typedef struct{
   size_t count; // data count
   struct object_t_decl *pdata;
 } object_vector_part_t;
@@ -79,7 +74,6 @@ typedef struct object_t_decl {
     object_float_part_t _float;
     object_str_part_t _str;
     object_symbol_part_t _symbol;
-    object_gc_broken_part_t _gc_broken;
     object_vector_part_t _vector;
     object_ref_part_t _ref;
     char _unknow;
@@ -124,7 +118,6 @@ object_int_part_t       *object_member_int       (err_t **err, object_t *tuple, 
 object_float_part_t     *object_member_float     (err_t **err, object_t *tuple, size_t offset);
 object_str_part_t       *object_member_str       (err_t **err, object_t *tuple, size_t offset);
 object_symbol_part_t    *object_member_symbol    (err_t **err, object_t *tuple, size_t offset);
-object_gc_broken_part_t *object_member_gc_broken (err_t **err, object_t *tuple, size_t offset);
 object_vector_part_t    *object_member_vector    (err_t **err, object_t *tuple, size_t offset);
 object_ref_part_t       *object_member_ref       (err_t **err, object_t *tuple, size_t offset);
 
@@ -164,7 +157,6 @@ err_t *object_rebase(err_t **err, object_t *obj, object_t *old_pool, size_t old_
 err_t *object_ptr_gc_relink(err_t **err, object_t **pobj);
 err_t *object_gc_relink(err_t **err, object_t *obj);
 
-//TODO remove
 err_t *object_move(err_t **err, object_t *obj_old, object_t *obj_new);
 
 #endif

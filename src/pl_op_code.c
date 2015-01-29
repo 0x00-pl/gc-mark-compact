@@ -68,8 +68,10 @@ int object_is_nil(err_t **err, object_t *obj){
 }
 
 object_t *object_tuple_member_index(err_t **err, object_t *tuple, size_t index){
-  // TODO check range
-  (void)err;
+  size_t count;
+  count = object_array_count(err, tuple);
+  PL_ASSERT(index<=count, err_out_of_range);
+  PL_FUNC_END
   return OBJ_ARR_AT(tuple, _ref, index).ptr;
 }
 
@@ -336,11 +338,6 @@ err_t *object_tuple_frame_add_env(err_t **err, gc_manager_t *gcm, object_t *fram
   key_value_pair = object_tuple_cons_alloc(err, gcm, symbol, value); PL_CHECK;
   env = object_tuple_frame_get_env(err, frame); PL_CHECK;
   object_vector_push(err, gcm, env, gc_manager_object_alloc_ref(err, gcm, key_value_pair)); PL_CHECK;
-  
-//   printf("[debug] push env:");
-//   object_verbose(err, key_value_pair, 3, 0, 0);
-//   printf("[debug] env:");
-//   object_verbose(err, env, 5, 0, 0);
   
   PL_FUNC_END;
   gc_manager_stack_object_balance(gcm, gcm_stack_depth);

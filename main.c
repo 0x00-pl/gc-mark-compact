@@ -39,7 +39,6 @@ int nmain(int argc, char *argv[]) {
   object_int_init(err, i3, i1->part._int.value + i2->part._int.value);
   
   
-  gc_manager_root(gc_manager)->part._ref.ptr = i3;
   
   printf("  before gc:\n");
   gc_verbose_object_pool(err, gc_manager, 0);
@@ -67,7 +66,6 @@ int nmain(int argc, char *argv[]) {
   object_vector_pop(err, vec1);
   object_vector_pop(err, vec1);
   
-  gc_manager_root(gc_manager)->part._ref.ptr = vec1;
   
   printf("  before gc:\n");
   gc_verbose_object_pool(err, gc_manager, 0);
@@ -100,7 +98,6 @@ int nmain(int argc, char *argv[]) {
   compile_verbose_code(err, gc_manager, parsed_exp_code, 0); PL_CHECK;
   printf("\n === code end === \n\n");
   
-  gc_manager_root(gc_manager)->part._ref.ptr = parsed_exp_code;
   printf("  before gc:\n");
   gc_verbose_object_pool(err, gc_manager, 0);
   gc_gc(err, gc_manager);
