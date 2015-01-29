@@ -34,7 +34,7 @@ err_t *vm_step_op_call_make_lambda(err_t **err, gc_manager_t *gcm, object_t *vm,
   env = gc_manager_object_alloc(err, gcm, TYPE_VECTOR); PL_CHECK;
   object_vector_init(err, env); PL_CHECK;
   key_value_pair = object_tuple_cons_alloc(err, gcm, g_nil, NULL); PL_CHECK;
-  object_vector_push(err, gcm, env, gc_manager_object_alloc_ref(err, gcm, key_value_pair)); PL_CHECK;
+  object_vector_ref_push(err, gcm, env, key_value_pair); PL_CHECK;
   
   // build env of lambda
   lambda = object_vector_ref_index(err, stack, -1); PL_CHECK;
@@ -48,7 +48,7 @@ err_t *vm_step_op_call_make_lambda(err_t **err, gc_manager_t *gcm, object_t *vm,
       // cannot find symbol in frame
       key_value_pair = object_tuple_cons_alloc(err, gcm, g_nil, NULL); PL_CHECK;
     }
-    object_vector_push(err, gcm, env, gc_manager_object_alloc_ref(err, gcm, key_value_pair)); PL_CHECK;
+    object_vector_ref_push(err, gcm, env, key_value_pair); PL_CHECK;
   }
   key_value_pair = NULL;
   key_symbol = NULL;
@@ -179,7 +179,7 @@ err_t *vm_step_op_call_resolve(err_t **err, gc_manager_t *gcm, object_t *vm, obj
   }
   
   value = object_tuple_cons_get_cdr(err, key_value_pair); PL_CHECK;
-  object_vector_push(err, gcm, stack, gc_manager_object_alloc_ref(err, gcm, value)); PL_CHECK;
+  object_vector_ref_push(err, gcm, stack, value); PL_CHECK;
   
   PL_FUNC_END;
   gc_manager_stack_object_balance(gcm, gcm_stack_depth);
@@ -234,7 +234,7 @@ err_t *vm_step_op_call_addi(err_t **err, gc_manager_t *gcm, object_t *vm, object
   
   value = gc_manager_object_alloc(err, gcm, TYPE_INT); PL_CHECK;
   object_int_init(err, value, sum); PL_CHECK;
-  object_vector_push(err, gcm, stack, gc_manager_object_alloc_ref(err, gcm, value)); PL_CHECK;
+  object_vector_ref_push(err, gcm, stack, value); PL_CHECK;
   
   PL_FUNC_END;
   gc_manager_stack_object_balance(gcm, gcm_stack_depth);

@@ -85,7 +85,7 @@ int vm_step(err_t **err, object_t *vm, gc_manager_t *gcm){
     arg1 = object_tuple_frame_get_current_code(err, top_frame); PL_CHECK;
     object_tuple_frame_inc_pc(err, top_frame); PL_CHECK;
     
-    object_vector_push(err, gcm, stack, gc_manager_object_alloc_ref(err, gcm, arg1)); PL_CHECK;
+    object_vector_ref_push(err, gcm, stack, arg1); PL_CHECK;
   }else if(cur_code == op_jmp){
     arg1 = object_tuple_frame_get_current_code(err, top_frame); PL_CHECK;
     object_tuple_frame_inc_pc(err, top_frame); PL_CHECK;
@@ -145,7 +145,7 @@ int vm_step(err_t **err, object_t *vm, gc_manager_t *gcm){
     object_vector_top(err, stack, stack_top); PL_CHECK;
     object_vector_pop(err, stack); PL_CHECK;
     
-    object_vector_ref_push(err, gcm, prev_stack, stack_top); PL_CHECK;
+    object_vector_push(err, gcm, prev_stack, stack_top); PL_CHECK;
     
     object_tuple_vm_set_top_frame(err, vm, prev_frame); PL_CHECK;
   }else{
@@ -180,20 +180,24 @@ err_t *vm_verbose_cur_code(err_t **err, gc_manager_t *gcm, object_t *vm){
   size_t gcm_stack_depth;
   object_t *top_frame = NULL;
   object_t *cur_code = NULL;
+  object_t *arg1 = NULL;
   object_t *pc = NULL;
   
   gcm_stack_depth = gc_manager_stack_object_get_depth(gcm);
   gc_manager_stack_object_push(err, gcm, &vm); PL_CHECK;
   gc_manager_stack_object_push(err, gcm, &top_frame); PL_CHECK;
   gc_manager_stack_object_push(err, gcm, &cur_code); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &arg1); PL_CHECK;
   gc_manager_stack_object_push(err, gcm, &pc); PL_CHECK;
   
   top_frame = object_tuple_vm_get_top_frame(err, vm); PL_CHECK;
   cur_code = object_tuple_frame_get_current_code(err, top_frame); PL_CHECK;
+  arg1 = object_tuple_frame_get_code(err, top_frame, 1); PL_CHECK;
   pc = object_tuple_frame_get_pc(err, top_frame); PL_CHECK;
   
   printf("[%ld]:", pc->part._int.value);
   object_verbose(err, cur_code, 3, 0, 0);
+  object_verbose(err, arg1, 3, 4, 0);
   
   PL_FUNC_END;
   gc_manager_stack_object_balance(gcm, gcm_stack_depth);

@@ -37,30 +37,30 @@ object_t *compile_exp(err_t **err, gc_manager_t *gcm, object_t *exp, object_t *c
   object_int_init(err, args_count_obj, (object_int_value_t)-1); PL_CHECK;
       
   if(exp == NULL){
-    object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, op_push)); PL_CHECK;
-    object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, g_nil)); PL_CHECK;
+    object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
+    object_vector_ref_push(err, gcm, code_vector, g_nil); PL_CHECK;
     goto fin;
   }
   
   // exp is atom
   if(exp->type != TYPE_REF){
     // push sym(x)
-    object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, op_push)); PL_CHECK;
-    object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, exp)); PL_CHECK;
+    object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
+    object_vector_ref_push(err, gcm, code_vector, exp); PL_CHECK;
     
     if(exp->type == TYPE_SYMBOL){
       // if it is symbol
       // call 1
-      object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, op_call)); PL_CHECK;
+      object_vector_ref_push(err, gcm, code_vector, op_call); PL_CHECK;
       object_int_init(err, args_count_obj, (object_int_value_t)1); PL_CHECK;
-      object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, args_count_obj)); PL_CHECK;
+      object_vector_ref_push(err, gcm, code_vector, args_count_obj); PL_CHECK;
     }
   }else{
     args_count = object_array_count(err, exp); PL_CHECK;
     // if exp is ()
     if(args_count == 0){
-      object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, op_push)); PL_CHECK;
-      object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, g_nil)); PL_CHECK;
+      object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
+      object_vector_ref_push(err, gcm, code_vector, g_nil); PL_CHECK;
       goto fin;
     }
     
@@ -68,11 +68,11 @@ object_t *compile_exp(err_t **err, gc_manager_t *gcm, object_t *exp, object_t *c
     func_keyword = OBJ_ARR_AT(exp,_ref,0).ptr;
     if(parser_symbol_eq(func_keyword, "quote")){
       // push exp[1]
-      object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, op_push)); PL_CHECK;
+      object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
       if(args_count == 1){
-        object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, g_nil)); PL_CHECK;
+        object_vector_ref_push(err, gcm, code_vector, g_nil); PL_CHECK;
       }else{
-        object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, OBJ_ARR_AT(exp,_ref,1).ptr)); PL_CHECK;
+        object_vector_ref_push(err, gcm, code_vector, OBJ_ARR_AT(exp,_ref,1).ptr); PL_CHECK;
       }
     }
     else if(parser_symbol_eq(func_keyword, "define")){
@@ -82,35 +82,35 @@ object_t *compile_exp(err_t **err, gc_manager_t *gcm, object_t *exp, object_t *c
       }
       
       // push sym(define)
-      object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, op_push)); PL_CHECK;
-      object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, g_define)); PL_CHECK;
-      
+      object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
+      object_vector_ref_push(err, gcm, code_vector, g_define); PL_CHECK;
+                   
       // push exp[1]
-      object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, op_push)); PL_CHECK;
-      object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, OBJ_ARR_AT(exp,_ref,1).ptr)); PL_CHECK;
+      object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
+      object_vector_ref_push(err, gcm, code_vector, OBJ_ARR_AT(exp,_ref,1).ptr); PL_CHECK;
       
       // <exp[2]>
       compile_exp(err, gcm, OBJ_ARR_AT(exp,_ref,2).ptr, code_vector); PL_CHECK;
       
       // call 3
-      object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, op_call)); PL_CHECK;
+      object_vector_ref_push(err, gcm, code_vector, op_call); PL_CHECK;
       args_count_obj = gc_manager_object_alloc(err, gcm, TYPE_INT); PL_CHECK;
       object_int_init(err, args_count_obj, 3); PL_CHECK;
-      object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, args_count_obj)); PL_CHECK;
+      object_vector_ref_push(err, gcm, code_vector, args_count_obj); PL_CHECK;
     }
     else if(parser_symbol_eq(func_keyword, "if")){
       if(args_count == 3){
         // push sym(if)
-        object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, op_push)); PL_CHECK;
-        object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, g_if)); PL_CHECK;
+        object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
+        object_vector_ref_push(err, gcm, code_vector, g_if); PL_CHECK;
         
         // <exp[1]>
         compile_exp(err, gcm, OBJ_ARR_AT(exp,_ref,1).ptr, code_vector); PL_CHECK;
         
         // jn :endif
-        object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, op_jn)); PL_CHECK;
+        object_vector_ref_push(err, gcm, code_vector, op_jn); PL_CHECK;
         if_endif_index = code_vector->part._vector.count;
-        object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, gc_manager_object_alloc(err, gcm, TYPE_INT))); PL_CHECK;
+        object_vector_ref_push(err, gcm, code_vector, gc_manager_object_alloc(err, gcm, TYPE_INT)); PL_CHECK;
         
         // <exp[2]>
         compile_exp(err, gcm, OBJ_ARR_AT(exp,_ref,2).ptr, code_vector); PL_CHECK;          
@@ -121,24 +121,24 @@ object_t *compile_exp(err_t **err, gc_manager_t *gcm, object_t *exp, object_t *c
         
       }else if(args_count == 4){
         // push sym(if)
-        object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, op_push)); PL_CHECK;
-        object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, g_if)); PL_CHECK;
+        object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
+        object_vector_ref_push(err, gcm, code_vector, g_if); PL_CHECK;
         
         // <exp[1]>
         compile_exp(err, gcm, OBJ_ARR_AT(exp,_ref,1).ptr, code_vector); PL_CHECK;
         
         // jn :else
-        object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, op_jn)); PL_CHECK;
+        object_vector_ref_push(err, gcm, code_vector, op_jn); PL_CHECK;
         if_else_index = code_vector->part._vector.count;
-        object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, gc_manager_object_alloc(err, gcm, TYPE_INT))); PL_CHECK;
+        object_vector_ref_push(err, gcm, code_vector, gc_manager_object_alloc(err, gcm, TYPE_INT)); PL_CHECK;
         
         // <exp[2]>
         compile_exp(err, gcm, OBJ_ARR_AT(exp,_ref,2).ptr, code_vector); PL_CHECK;
         
         // jmp :endif
-        object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, op_jmp)); PL_CHECK;
+        object_vector_ref_push(err, gcm, code_vector, op_jmp); PL_CHECK;
         if_endif_index = code_vector->part._vector.count;
-        object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, gc_manager_object_alloc(err, gcm, TYPE_INT))); PL_CHECK;
+        object_vector_ref_push(err, gcm, code_vector, gc_manager_object_alloc(err, gcm, TYPE_INT)); PL_CHECK;
         
         // else:
         object_int_init(err, OBJ_ARR_AT(code_vector->part._vector.pdata, _ref, if_else_index).ptr, (object_int_value_t)code_vector->part._vector.count); PL_CHECK;
@@ -161,20 +161,20 @@ object_t *compile_exp(err_t **err, gc_manager_t *gcm, object_t *exp, object_t *c
       }
       
       // push sym(set)
-      object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, op_push)); PL_CHECK;
-      object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, g_set)); PL_CHECK;
+      object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
+      object_vector_ref_push(err, gcm, code_vector, g_set); PL_CHECK;
       
       // push sym = exp[1]
-      object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, op_push)); PL_CHECK;
-      object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, OBJ_ARR_AT(exp,_ref,1).ptr)); PL_CHECK;
+      object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
+      object_vector_ref_push(err, gcm, code_vector, OBJ_ARR_AT(exp,_ref,1).ptr); PL_CHECK;
       
       // <exp[2]>
       compile_exp(err, gcm, OBJ_ARR_AT(exp,_ref,2).ptr, code_vector); PL_CHECK;
       
       // call 3
-      object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, op_call)); PL_CHECK;
+      object_vector_ref_push(err, gcm, code_vector, op_call); PL_CHECK;
       object_int_init(err, args_count_obj, 3); PL_CHECK;
-      object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, args_count_obj)); PL_CHECK;
+      object_vector_ref_push(err, gcm, code_vector, args_count_obj); PL_CHECK;
     }
     else if(parser_symbol_eq(func_keyword, "lambda")){
       if(args_count < 3){
@@ -182,22 +182,22 @@ object_t *compile_exp(err_t **err, gc_manager_t *gcm, object_t *exp, object_t *c
         goto fin;
       }
       // push sym(lambda)
-      object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, op_push)); PL_CHECK;
-      object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, g_mklmd)); PL_CHECK;
+      object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
+      object_vector_ref_push(err, gcm, code_vector, g_mklmd); PL_CHECK;
       
       // push args = exp[1]
-      object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, op_push)); PL_CHECK;
-      object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, OBJ_ARR_AT(exp,_ref,1).ptr)); PL_CHECK;
+      object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
+      object_vector_ref_push(err, gcm, code_vector, OBJ_ARR_AT(exp,_ref,1).ptr); PL_CHECK;
       
       // push code = <compile_lambda(exp)>
-      object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, op_push)); PL_CHECK;
+      object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
       lambda_object_lambda = compile_lambda(err, gcm, exp); PL_CHECK;
-      object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, lambda_object_lambda)); PL_CHECK;
+      object_vector_ref_push(err, gcm, code_vector, lambda_object_lambda); PL_CHECK;
       
       // call 3
-      object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, op_call)); PL_CHECK;
+      object_vector_ref_push(err, gcm, code_vector, op_call); PL_CHECK;
       object_int_init(err, args_count_obj, 3); PL_CHECK;
-      object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, args_count_obj)); PL_CHECK;
+      object_vector_ref_push(err, gcm, code_vector, args_count_obj); PL_CHECK;
     }
     else{
       // push args
@@ -206,9 +206,9 @@ object_t *compile_exp(err_t **err, gc_manager_t *gcm, object_t *exp, object_t *c
       }
       
       // call n
-      object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, op_call)); PL_CHECK;
+      object_vector_ref_push(err, gcm, code_vector, op_call); PL_CHECK;
       object_int_init(err, args_count_obj, (object_int_value_t)args_count); PL_CHECK;
-      object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, args_count_obj)); PL_CHECK;
+      object_vector_ref_push(err, gcm, code_vector, args_count_obj); PL_CHECK;
     }
   }
   
@@ -341,7 +341,7 @@ object_t *compile_lambda(err_t **err, gc_manager_t *gcm, object_t *lambda_exp){
   object_vector_init(err, exp_code_vector); PL_CHECK;
   
   compile_exp(err, gcm, OBJ_ARR_AT(lambda_exp,_ref,2).ptr, exp_code_vector); PL_CHECK;
-  object_vector_push(err, gcm, exp_code_vector, gc_manager_object_alloc_ref(err, gcm, op_ret)); PL_CHECK;
+  object_vector_ref_push(err, gcm, exp_code_vector, op_ret); PL_CHECK;
   
   exp_code = object_vector_to_array(err, exp_code_vector, gcm);
   
@@ -386,7 +386,7 @@ object_t *compile_global(err_t **err, gc_manager_t *gcm, object_t *exp){
     compile_exp(err, gcm, OBJ_ARR_AT(exp, _ref, i).ptr, code_vector);
   }
   
-  object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, op_ret)); PL_CHECK;
+  object_vector_ref_push(err, gcm, code_vector, op_ret); PL_CHECK;
   
   code_array = object_vector_to_array(err, code_vector, gcm);
   

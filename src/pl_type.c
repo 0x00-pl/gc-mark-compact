@@ -338,7 +338,15 @@ err_t *object_vector_push(err_t **err, struct gc_manager_t_decl *gcm, object_t *
 }
 
 err_t *object_vector_ref_push(err_t **err, struct gc_manager_t_decl *gcm, object_t *vec, object_t *item){
-  return object_vector_push(err, gcm, vec, gc_manager_object_alloc_ref(err, gcm, item));
+  size_t gs;
+  gs = gc_manager_stack_object_get_depth(gcm);
+  gc_manager_stack_object_push(err, gcm, &vec); PL_CHECK;
+  
+  object_vector_push(err, gcm, vec, gc_manager_object_alloc_ref(err, gcm, item)); PL_CHECK;
+  
+  PL_FUNC_END
+  gc_manager_stack_object_balance(gcm,gs);
+  return *err;
 }
 
 // object str

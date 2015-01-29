@@ -337,7 +337,7 @@ err_t *object_tuple_frame_add_env(err_t **err, gc_manager_t *gcm, object_t *fram
   
   key_value_pair = object_tuple_cons_alloc(err, gcm, symbol, value); PL_CHECK;
   env = object_tuple_frame_get_env(err, frame); PL_CHECK;
-  object_vector_push(err, gcm, env, gc_manager_object_alloc_ref(err, gcm, key_value_pair)); PL_CHECK;
+  object_vector_ref_push(err, gcm, env, key_value_pair); PL_CHECK;
   
   PL_FUNC_END;
   gc_manager_stack_object_balance(gcm, gcm_stack_depth);
