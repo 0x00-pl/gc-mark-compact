@@ -234,7 +234,7 @@ object_t *array_ref_symbol_2_array_symbol(err_t **err, gc_manager_t *gcm, object
   
   for(i=0; i<count; i++){
     object_type_check(err, OBJ_ARR_AT(array_ref_symbol,_ref,i).ptr, TYPE_SYMBOL); PL_CHECK;
-    object_symbol_part_init(err, (&array_symbol->part._symbol)+i, OBJ_ARR_AT(array_ref_symbol,_ref,i).ptr->part._symbol.name); PL_CHECK;
+    object_symbol_init_nth(err, array_symbol, (int)i, OBJ_ARR_AT(array_ref_symbol,_ref,i).ptr->part._symbol.name); PL_CHECK;
   }
   
   PL_FUNC_END
@@ -353,6 +353,7 @@ object_t *compile_lambda(err_t **err, gc_manager_t *gcm, object_t *lambda_exp){
   unresolved_env_symbol = gc_manager_object_alloc(err, gcm, TYPE_VECTOR); PL_CHECK;
   object_vector_init(err, unresolved_env_symbol); PL_CHECK;
   compile_lambda_get_env(err, gcm, lambda_exp, unresolved_env_symbol, resolved_env_symbol); PL_CHECK;
+  
   unresolved_env_symbol_array = object_vector_to_array(err, unresolved_env_symbol, gcm);
   
   lambda = object_tuple_lambda_alloc(err, gcm, lambda_argsname, OBJ_ARR_AT(lambda_exp,_ref,2).ptr, exp_code, unresolved_env_symbol_array); PL_CHECK;
@@ -384,6 +385,8 @@ object_t *compile_global(err_t **err, gc_manager_t *gcm, object_t *exp){
   for(i=0; i<count; i++){
     compile_exp(err, gcm, OBJ_ARR_AT(exp, _ref, i).ptr, code_vector);
   }
+  
+  object_vector_push(err, gcm, code_vector, gc_manager_object_alloc_ref(err, gcm, op_ret)); PL_CHECK;
   
   code_array = object_vector_to_array(err, code_vector, gcm);
   
@@ -428,6 +431,8 @@ err_t *compile_verbose_lambda(err_t **err, gc_manager_t *gcm, object_t *lambda, 
   print_indentation(indentation+1);
   parser_verbose(err, object_tuple_lambda_get_exp(err, lambda)); PL_CHECK;
   printf("\n");
+  
+  compile_verbose_array(err, gcm, object_tuple_lambda_get_envname(err, lambda), indentation+1); PL_CHECK;
   
   compile_verbose_code(err, gcm, object_tuple_lambda_get_code(err, lambda), indentation+1); PL_CHECK;
   

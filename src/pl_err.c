@@ -23,6 +23,7 @@ int err_print(err_t *err){
   return 0;
 }
 
+
 int err_free(err_t *err){
   if(err == NULL){return 0;}
   err_free(err->inner);
@@ -53,4 +54,7 @@ err_t *err_out_of_range(err_t **err, const char *file, size_t line, const char *
 }
 err_t *err_parsing(err_t **err, const char *file, size_t line, const char *extra_message){
   return err_new(err, file, line, extra_message, ERR_PARSING);
+}
+err_t *err_testing(err_t **err, const char *file, size_t line, const char *extra_message){
+  return err_new(err, file, line, extra_message, ERR_TESTING);
 }

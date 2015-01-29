@@ -9,7 +9,7 @@
 
 /* run this program using the console pauser or add your own getch, system("pause") or input loop */
 
-int main(int argc, char *argv[]) {
+int nmain(int argc, char *argv[]) {
   (void)argc;(void)argv;
 //   return test_err(0);
   err_t *erre = NULL;
@@ -36,10 +36,10 @@ int main(int argc, char *argv[]) {
   
   object_t *i3 = gc_manager_object_alloc(err, gc_manager, TYPE_INT);
   gc_manager_stack_object_push(err, gc_manager, &i3);
-  object_int_init(err, i3, object_as_int(err, i1)->value + object_as_int(err, i2)->value);
+  object_int_init(err, i3, i1->part._int.value + i2->part._int.value);
   
   
-  gc_manager_root(err, gc_manager)->ptr = i3;
+  gc_manager_root(gc_manager)->part._ref.ptr = i3;
   
   printf("  before gc:\n");
   gc_verbose_object_pool(err, gc_manager, 0);
@@ -61,13 +61,13 @@ int main(int argc, char *argv[]) {
   object_vector_push(err, gc_manager, vec1, i1);
   object_vector_top(err, vec1, i1);
   object_vector_push(err, gc_manager, vec1, i1);
-  object_vector_pop(err, vec1, NULL);
+  object_vector_pop(err, vec1);
   object_vector_push(err, gc_manager, vec1, i1);
-  object_vector_pop(err, vec1, NULL);
-  object_vector_pop(err, vec1, NULL);
-  object_vector_pop(err, vec1, NULL);
+  object_vector_pop(err, vec1);
+  object_vector_pop(err, vec1);
+  object_vector_pop(err, vec1);
   
-  gc_manager_root(err, gc_manager)->ptr = vec1;
+  gc_manager_root(gc_manager)->part._ref.ptr = vec1;
   
   printf("  before gc:\n");
   gc_verbose_object_pool(err, gc_manager, 0);
@@ -79,8 +79,8 @@ int main(int argc, char *argv[]) {
   // parser
   printf("test parser:\n");
   size_t pos = 0;
-  object_t *parsed_exp;
-  object_t *parsed_exp_code; 
+  object_t *parsed_exp = NULL;
+  object_t *parsed_exp_code = NULL; 
   
   parsed_exp = parser_parse_exp(err, gc_manager, "((lambda () (;;; The FACT procedure computes the factorial \n\
 ;;; of a non-negative integer.\n\
@@ -100,14 +100,15 @@ int main(int argc, char *argv[]) {
   compile_verbose_code(err, gc_manager, parsed_exp_code, 0); PL_CHECK;
   printf("\n === code end === \n\n");
   
-  gc_manager_root(err, gc_manager)->ptr = parsed_exp_code;
+  gc_manager_root(gc_manager)->part._ref.ptr = parsed_exp_code;
   printf("  before gc:\n");
   gc_verbose_object_pool(err, gc_manager, 0);
   gc_gc(err, gc_manager);
   printf("  after gc\n");
   gc_verbose_object_pool(err, gc_manager, 0);
   
-  PL_FUNC_END_EX(gc_manager_stack_object_balance(gc_manager,gs); gc_manager_halt(err, gc_manager),err_print(*err));
-  
+  PL_FUNC_END_EX(, err_print(*err));
+  gc_manager_stack_object_balance(gc_manager,gs);
+  gc_manager_halt(err, gc_manager);
   return 0;
 }

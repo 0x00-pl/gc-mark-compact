@@ -3,9 +3,9 @@
 #include "pl_gc.h"
 #include "pl_err.h"
 #include "pl_op_code.h"
-#include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 
 
@@ -292,7 +292,7 @@ object_t *parser_parse_node_number_x(err_t **err, gc_manager_t * gcm, const char
   object_t *ret = NULL;
   size_t p = 0;
   int sign = 1;
-  long int int_value = 0;
+  object_int_value_t int_value = 0;
     
   //sign
   if(text[0]=='+') {sign = 1; p++;}
@@ -316,14 +316,17 @@ object_t *parser_parse_node_number_x(err_t **err, gc_manager_t * gcm, const char
   return ret;
 }
 object_t *parser_parse_node_symbol(err_t **err, gc_manager_t * gcm, const char *text, size_t size){
+  size_t gc_stack_size;
   object_t *name = NULL;
   object_t *ret = NULL;
   char symbol_str[size+1];
   
   strncpy(symbol_str, text, size);
   symbol_str[size] = '\0';
-  
-  gc_manager_object_reserve(err, gcm, object_sizeof(err, TYPE_STR) + object_sizeof(err, TYPE_SYMBOL)); PL_CHECK;
+    
+  gc_stack_size = gc_manager_stack_object_get_depth(gcm);
+  gc_manager_stack_object_push(err, gcm, &name); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &ret); PL_CHECK;
   
   name = gc_manager_object_alloc(err, gcm, TYPE_STR); PL_CHECK;
   object_str_init(err, name, symbol_str); PL_CHECK;
@@ -331,6 +334,7 @@ object_t *parser_parse_node_symbol(err_t **err, gc_manager_t * gcm, const char *
   object_symbol_init(err, ret, name); PL_CHECK;
   
   PL_FUNC_END_EX(,ret=NULL)
+  gc_manager_stack_object_balance(gcm, gc_stack_size);
   return ret;
 }
 
@@ -434,7 +438,7 @@ object_t *parser_parse_exp(err_t **err, gc_manager_t * gcm, const char *text, si
     object_vector_push(err, gcm, ret, item_ref); PL_CHECK;
   }
   
-  count = object_vector_count(err, ret);
+  count = ret->part._vector.count;
   ret = object_vector_to_array(err, ret, gcm); PL_CHECK;
   
   *pos = p;
@@ -443,13 +447,9 @@ object_t *parser_parse_exp(err_t **err, gc_manager_t * gcm, const char *text, si
 }
 
 err_t *parser_verbose(err_t **err, object_t *exp){
-  object_ref_part_t *ref_part = NULL;
-  object_int_part_t *int_part = NULL;
-  object_str_part_t *str_part = NULL;
-  object_vector_part_t *vector_part = NULL;
-  object_symbol_part_t *symbol_part = NULL;
   size_t count;
   size_t i,j;
+  object_t *str = NULL;
   
   if(exp == NULL) {goto fin;}
   
@@ -457,39 +457,39 @@ err_t *parser_verbose(err_t **err, object_t *exp){
   if(count == 0) {printf("()"); goto fin;}
   switch(exp->type){
     case TYPE_REF:
-      ref_part = object_as_ref(err, exp); PL_CHECK;
       printf("(");
       for(i=0; i<count; i++){
-        parser_verbose(err, ref_part[i].ptr); PL_CHECK;
+        parser_verbose(err, OBJ_ARR_AT(exp, _ref, i).ptr); PL_CHECK;
         printf(" ");
       }
       printf(")");
       break;
     case TYPE_STR:
-      str_part = object_as_str(err, exp);
       for(i=0; i<count; i++){
-        printf("\"%s\" ", str_part[i].str);
+        printf("\"%s\" ", OBJ_ARR_AT(exp, _str, i).str);
       }
       break;
     case TYPE_SYMBOL:
-      symbol_part = object_as_symbol(err, exp);
       for(i=0; i<count; i++){
-        str_part = object_as_str(err, symbol_part[i].name);
-        printf("$%s ", str_part->str);
+        str = OBJ_ARR_AT(exp, _symbol, i).name;
+        if(str==NULL) {
+          printf("[debug]");
+        }else{
+          object_type_check(err, str, TYPE_STR); PL_CHECK;
+          printf("$%s ", str->part._str.str);
+        }
       }
       break;
     case TYPE_INT:
-      int_part = object_as_int(err, exp);
       for(i=0; i<count; i++){
-        printf("%ld ", int_part[i].value);
+        printf("%ld ", OBJ_ARR_AT(exp, _int, i).value);
       }
       break;
     case TYPE_VECTOR:
-      vector_part = object_as_vector(err, exp); PL_CHECK;
       for(i=0; i<count; i++){
         printf("#(");
-        for(j=0; j<vector_part[i].count; j++){
-          parser_verbose(err, (&vector_part[i].pdata->part._ref)[j].ptr); PL_CHECK;
+        for(j=0; j<OBJ_ARR_AT(exp, _vector, i).count; j++){
+          parser_verbose(err, OBJ_ARR_AT(OBJ_ARR_AT(exp, _vector, i).pdata, _ref, j).ptr); PL_CHECK;
           printf(" ");
         }
         printf(") ");

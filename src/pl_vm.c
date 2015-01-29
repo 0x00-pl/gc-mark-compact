@@ -7,10 +7,11 @@
 #include "pl_vm_builtin_func.h"
 
 // vm:{top_frame:frame(), }
-object_t *vm_alloc(err_t **err, gc_manager_t *gcm, object_t *lambda){
+object_t *vm_alloc(err_t **err, gc_manager_t *gcm, object_t *code){
   size_t gcm_stack_depth;
   object_t *vm = NULL;
   object_t *top_frame = NULL;
+  object_t *lambda = NULL;
   object_t *empty_env = NULL;
   
   gcm_stack_depth = gc_manager_stack_object_get_depth(gcm);
@@ -19,28 +20,32 @@ object_t *vm_alloc(err_t **err, gc_manager_t *gcm, object_t *lambda){
   gc_manager_stack_object_push(err, gcm, &top_frame); PL_CHECK;
   gc_manager_stack_object_push(err, gcm, &empty_env); PL_CHECK;
   
+  
   vm = object_tuple_alloc(err, gcm, 1); PL_CHECK;
   empty_env = gc_manager_object_alloc(err, gcm, TYPE_VECTOR); PL_CHECK;
   object_vector_init(err, empty_env); PL_CHECK;
+  lambda = object_tuple_empty_lambda_alloc(err, gcm, code); PL_CHECK;
   top_frame = object_tuple_frame_alloc(err, gcm, lambda, empty_env, NULL); PL_CHECK;  //inital defalut frame
+  object_tuple_frame_add_env(err, gcm, top_frame, g_nil, NULL); PL_CHECK; //init NULL parent_env
   object_tuple_vm_set_top_frame(err, vm, top_frame); PL_CHECK;
   
   PL_FUNC_END_EX(,vm=NULL);
   gc_manager_stack_object_balance(gcm, gcm_stack_depth);
   return vm;
 }
+
 object_t *object_tuple_vm_get_top_frame(err_t **err, object_t *vm){
-  return object_tuple_member_index(err, vm, 0);
+  (void)err;
+  return OBJ_ARR_AT(vm, _ref, 0).ptr;
 }
 
 err_t *object_tuple_vm_set_top_frame(err_t **err, object_t *vm, object_t *top_frame){
-  object_member_set_value(err, vm, 0, top_frame); PL_CHECK;
-  PL_FUNC_END
+  OBJ_ARR_AT(vm, _ref, 0).ptr = top_frame;
   return *err;
 }
 
 
-err_t *vm_step(err_t **err, object_t *vm, gc_manager_t *gcm){
+int vm_step(err_t **err, object_t *vm, gc_manager_t *gcm){
   size_t gcm_stack_depth;
   object_t *arg1 = NULL;
   object_t *cons_ar = NULL;
@@ -80,7 +85,7 @@ err_t *vm_step(err_t **err, object_t *vm, gc_manager_t *gcm){
     arg1 = object_tuple_frame_get_current_code(err, top_frame); PL_CHECK;
     object_tuple_frame_inc_pc(err, top_frame); PL_CHECK;
     
-    object_vector_push(err, gcm, stack, arg1);
+    object_vector_push(err, gcm, stack, gc_manager_object_alloc_ref(err, gcm, arg1)); PL_CHECK;
   }else if(cur_code == op_jmp){
     arg1 = object_tuple_frame_get_current_code(err, top_frame); PL_CHECK;
     object_tuple_frame_inc_pc(err, top_frame); PL_CHECK;
@@ -93,7 +98,8 @@ err_t *vm_step(err_t **err, object_t *vm, gc_manager_t *gcm){
     object_type_check(err, arg1, TYPE_INT); PL_CHECK;
     
     stack_top = gc_manager_object_alloc(err, gcm, TYPE_REF); PL_CHECK;
-    object_vector_pop(err, stack, stack_top); PL_CHECK;
+    object_vector_top(err, stack, stack_top); PL_CHECK;
+    object_vector_pop(err, stack); PL_CHECK;
     if(!object_is_nil(err, stack_top->part._ref.ptr)){
       object_tuple_frame_set_pc(err, top_frame, arg1->part._int.value); PL_CHECK;
     }
@@ -103,13 +109,12 @@ err_t *vm_step(err_t **err, object_t *vm, gc_manager_t *gcm){
     object_type_check(err, arg1, TYPE_INT); PL_CHECK;
     
     
-    PL_ASSERT(object_vector_type(err, stack)==TYPE_REF, err_typecheck);
-    func = ((object_ref_part_t*)object_vector_index(err, stack, -(int)arg1->part._int.value, NULL))->ptr; PL_CHECK;
+    object_type_check(err, stack->part._vector.pdata, TYPE_REF); PL_CHECK;
+    func = object_vector_ref_index(err, stack, -(int)arg1->part._int.value); PL_CHECK;
     
     // built-in function
     if(func->type == TYPE_SYMBOL){
-      // resolve symbol
-      object_tuple_frame_resolve(err, gcm, top_frame, func); PL_CHECK;
+      vm_step_op_call_resolve(err, gcm, vm, top_frame, func, stack, (size_t)arg1->part._int.value); PL_CHECK;
     }
     else if(func == g_define || func == g_set){
       vm_step_op_call_define(err, gcm, vm, top_frame, func, stack, (size_t)arg1->part._int.value); PL_CHECK;
@@ -132,12 +137,15 @@ err_t *vm_step(err_t **err, object_t *vm, gc_manager_t *gcm){
     
   }else if(cur_code == op_ret){
     prev_frame = object_tuple_frame_get_prev_frame(err, top_frame); PL_CHECK;
+    if(prev_frame == NULL) {return 1;} // halt
+    
     prev_stack = object_tuple_frame_get_stack(err, prev_frame); PL_CHECK;
     
     stack_top = gc_manager_object_alloc(err, gcm, TYPE_REF); PL_CHECK;
-    object_vector_pop(err, stack, stack_top); PL_CHECK;
+    object_vector_top(err, stack, stack_top); PL_CHECK;
+    object_vector_pop(err, stack); PL_CHECK;
     
-    object_vector_push(err, gcm, prev_stack, stack_top); PL_CHECK;
+    object_vector_ref_push(err, gcm, prev_stack, stack_top); PL_CHECK;
     
     object_tuple_vm_set_top_frame(err, vm, prev_frame); PL_CHECK;
   }else{
@@ -146,6 +154,123 @@ err_t *vm_step(err_t **err, object_t *vm, gc_manager_t *gcm){
   
   PL_FUNC_END;
   gc_manager_stack_object_balance(gcm, gcm_stack_depth);
+  return 0;
+}
+
+
+err_t *vm_add_stdlib(err_t **err, gc_manager_t *gcm, object_t *vm){
+  size_t gcm_stack_depth;
+  object_t *top_frame = NULL;
+  
+  gcm_stack_depth = gc_manager_stack_object_get_depth(gcm);
+  gc_manager_stack_object_push(err, gcm, &vm); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &top_frame); PL_CHECK;
+  
+  top_frame = object_tuple_vm_get_top_frame(err, vm); PL_CHECK;
+  
+  add_builtin_func(err, gcm, top_frame, "+", &vm_step_op_call_addi);
+  add_builtin_func(err, gcm, top_frame, "display", &vm_step_op_call_display);
+  
+  PL_FUNC_END;
+  gc_manager_stack_object_balance(gcm, gcm_stack_depth);
   return *err;
 }
+
+err_t *vm_verbose_cur_code(err_t **err, gc_manager_t *gcm, object_t *vm){
+  size_t gcm_stack_depth;
+  object_t *top_frame = NULL;
+  object_t *cur_code = NULL;
+  object_t *pc = NULL;
+  
+  gcm_stack_depth = gc_manager_stack_object_get_depth(gcm);
+  gc_manager_stack_object_push(err, gcm, &vm); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &top_frame); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &cur_code); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &pc); PL_CHECK;
+  
+  top_frame = object_tuple_vm_get_top_frame(err, vm); PL_CHECK;
+  cur_code = object_tuple_frame_get_current_code(err, top_frame); PL_CHECK;
+  pc = object_tuple_frame_get_pc(err, top_frame); PL_CHECK;
+  
+  printf("[%ld]:", pc->part._int.value);
+  object_verbose(err, cur_code, 3, 0, 0);
+  
+  PL_FUNC_END;
+  gc_manager_stack_object_balance(gcm, gcm_stack_depth);
+  return *err;
+}
+err_t *vm_verbose_stack(err_t **err, gc_manager_t *gcm, object_t *vm){
+  size_t gcm_stack_depth;
+  object_t *top_frame = NULL;
+  object_t *stack = NULL;
+  
+  gcm_stack_depth = gc_manager_stack_object_get_depth(gcm);
+  gc_manager_stack_object_push(err, gcm, &vm); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &top_frame); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &stack); PL_CHECK;
+  
+  top_frame = object_tuple_vm_get_top_frame(err, vm); PL_CHECK;
+  stack = object_tuple_frame_get_stack(err, top_frame); PL_CHECK;
+  
+  printf(" === stack ===\n");
+  object_verbose(err, stack, 3, 0, 0); PL_CHECK;
+  
+  PL_FUNC_END;
+  gc_manager_stack_object_balance(gcm, gcm_stack_depth);
+  return *err;
+}
+err_t *vm_verbose_env(err_t **err, gc_manager_t *gcm, object_t *vm){
+  size_t gcm_stack_depth;
+  object_t *top_frame = NULL;
+  object_t *env = NULL;
+  
+  gcm_stack_depth = gc_manager_stack_object_get_depth(gcm);
+  gc_manager_stack_object_push(err, gcm, &vm); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &top_frame); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &env); PL_CHECK;
+  
+  top_frame = object_tuple_vm_get_top_frame(err, vm); PL_CHECK;
+  
+  env = object_tuple_frame_get_env(err, top_frame); PL_CHECK;
+  
+  printf(" === env ===\n");
+  object_verbose(err, env, 5, 0, 0); PL_CHECK;
+  
+  PL_FUNC_END;
+  gc_manager_stack_object_balance(gcm, gcm_stack_depth);
+  return *err;
+}
+err_t *vm_verbose_frame(err_t **err, gc_manager_t *gcm, object_t *vm){
+  size_t gcm_stack_depth;
+  object_t *top_frame = NULL;
+  
+  gcm_stack_depth = gc_manager_stack_object_get_depth(gcm);
+  gc_manager_stack_object_push(err, gcm, &vm); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &top_frame); PL_CHECK;
+  
+  top_frame = object_tuple_vm_get_top_frame(err, vm); PL_CHECK;
+  
+  printf(" === top-frame ===\n");
+  object_verbose(err, top_frame, 2, 0, 0); PL_CHECK;
+  
+  PL_FUNC_END;
+  gc_manager_stack_object_balance(gcm, gcm_stack_depth);
+  return *err;
+}
+err_t *vm_verbose(err_t **err, gc_manager_t *gcm, object_t *vm){
+  size_t gcm_stack_depth;
+  
+  gcm_stack_depth = gc_manager_stack_object_get_depth(gcm);
+  gc_manager_stack_object_push(err, gcm, &vm); PL_CHECK;
+  
+  
+  printf(" === vm ===\n");
+  object_verbose(err, vm, 2, 0, 0); PL_CHECK;
+  
+  PL_FUNC_END;
+  gc_manager_stack_object_balance(gcm, gcm_stack_depth);
+  return *err;
+}
+
+
 

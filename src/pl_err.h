@@ -11,7 +11,8 @@
 #define ERR_TYPECHECK    -4
 #define ERR_OUT_OF_RANGE -5
 #define ERR_PARSING      -6
-#define ERR_TRACE        -7
+#define ERR_TESTING      -7
+#define ERR_TRACE        -8
 
 #define ERRLEVEL_NO_ERR 0
 #define ERRLEVEL_WARING 1
@@ -34,6 +35,11 @@ err_t *err_alloc(err_t **err, const char *file, size_t line, const char *extra_m
 err_t *err_typecheck(err_t **err, const char *file, size_t line, const char *extra_message);
 err_t *err_out_of_range(err_t **err, const char *file, size_t line, const char *extra_message);
 err_t *err_parsing(err_t **err, const char *file, size_t line, const char *extra_message);
+err_t *err_testing(err_t **err, const char *file, size_t line, const char *extra_message);
+
+// static int pass(const char *p, ...){(void)p;return 0;}
+// 
+// #define dbgp pass //printf  //[debug]
 
 
 // #define PL_PRINT_LOCATION printf("at file: %s line: %d \n\n", __FILE__, __LINE__)

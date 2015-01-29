@@ -87,46 +87,31 @@ typedef struct object_t_decl {
 } object_t;
 
 // object init/halt
+err_t *object_raw_init_nth(err_t **err, object_t *obj, int n, void *ptr, int auto_free);
+err_t *object_int_init_nth(err_t **err, object_t *obj, int n, object_int_value_t value);
+err_t *object_float_init_nth(err_t **err, object_t *obj, int n, object_float_value_t value);
+err_t *object_str_init_nth(err_t **err, object_t *obj, int n, const char* text);
+err_t *object_symbol_init_nth(err_t **err, object_t *obj, int n, object_t *name);
+err_t *object_vector_init_nth(err_t **err, object_t *obj, int n);
+err_t *object_ref_init_nth(err_t **err, object_t *obj, int n, object_t *ptr);
+
 err_t *object_raw_init(err_t **err, object_t *thiz, void *ptr, int auto_free);
-err_t *object_int_init(err_t **err, object_t *thiz, long int value);
-err_t *object_float_init(err_t **err, object_t *thiz, double value);
+err_t *object_int_init(err_t **err, object_t *thiz, object_int_value_t value);
+err_t *object_float_init(err_t **err, object_t *thiz, object_float_value_t value);
 err_t *object_str_init(err_t **err, object_t *thiz, const char *text);
 err_t *object_symbol_init(err_t **err, object_t *thiz, object_t *name);
 err_t *object_gc_broken_init(err_t **err, object_t *thiz, object_t *ptr);
 err_t *object_vector_init(err_t **err, object_t *thiz);
 err_t *object_ref_init(err_t **err, object_t *thiz, object_t *ptr);
+err_t *object_init_nth(err_t **err, object_t *obj, int n);
+err_t *object_copy_nth(err_t **err, object_t *src, int src_n, object_t *dst, int dst_n);
 
-err_t *object_raw_halt(err_t **err, object_t *thiz);
-err_t *object_str_halt(err_t **err, object_t *thiz);
 err_t *object_halt(err_t **err, object_t *obj);
 
-
-err_t *object_raw_part_init(err_t **err, object_raw_part_t *part, void *ptr, int auto_free);
-err_t *object_int_part_init(err_t **err, object_int_part_t *part, long int value);
-err_t *object_float_part_init(err_t **err, object_float_part_t *part, double value);
-err_t *object_str_part_init(err_t **err, object_str_part_t *part, const char* text);
-err_t *object_symbol_part_init(err_t **err, object_symbol_part_t *part, object_t *name);
-err_t *object_gc_broken_part_init(err_t **err, object_gc_broken_part_t *part, object_t *ptr);
-err_t *object_vector_part_init(err_t **err, object_vector_part_t *part);
-err_t *object_ref_part_init(err_t **err, object_ref_part_t *part, object_t *ptr);
-err_t *object_part_halt(err_t **err, void *part, enum_object_type_t type);
-
-
-// object copy
-err_t *object_copy_init(err_t **err, object_t *src, object_t *dst);
 
 
 // object cast
 err_t *object_type_check(err_t **err, object_t *obj, enum_object_type_t type);
-void* object_part(err_t **err, object_t *obj);
-object_raw_part_t       *object_as_raw       (err_t **err, object_t *obj);
-object_int_part_t       *object_as_int       (err_t **err, object_t *obj);
-object_float_part_t     *object_as_float     (err_t **err, object_t *obj);
-object_str_part_t       *object_as_str       (err_t **err, object_t *obj);
-object_symbol_part_t    *object_as_symbol    (err_t **err, object_t *obj);
-object_gc_broken_part_t *object_as_gc_broken (err_t **err, object_t *obj);
-object_vector_part_t    *object_as_vector    (err_t **err, object_t *obj);
-object_ref_part_t       *object_as_ref       (err_t **err, object_t *obj);
 
 
 // object tuple
@@ -145,18 +130,14 @@ object_ref_part_t       *object_member_ref       (err_t **err, object_t *tuple, 
 
 // object vecter
 struct gc_manager_t_decl;
-err_t *object_vector_part_pop(err_t **err, object_vector_part_t *vector_part, object_t *dest);
-void *object_vector_part_top(err_t **err, object_vector_part_t *vector_part, object_t *dest);
-object_t *object_vector_part_to_array(err_t **err, object_vector_part_t *vector_part, struct gc_manager_t_decl *gcm);
-void *object_vector_part_index(err_t **err, object_vector_part_t *vector_part, int index, object_t *dest);
-enum_object_type_t object_vector_part_type(err_t **err, object_vector_part_t *vector_part);
-
 
 err_t *object_vector_push(err_t **err, struct gc_manager_t_decl *gcm, object_t *vec, object_t *item);
-err_t *object_vector_pop(err_t **err, object_t *vec, object_t *dest);
-void *object_vector_top(err_t **err, object_t *vec, object_t *dest);
+err_t *object_vector_ref_push(err_t **err, struct gc_manager_t_decl *gcm, object_t *vec, object_t *item);
+
+err_t *object_vector_pop(err_t **err, object_t *vec);
+err_t *object_vector_top(err_t **err, object_t *vec, object_t *dest);
 object_t *object_vector_to_array(err_t **err, object_t *vec, struct gc_manager_t_decl *gcm);
-void *object_vector_index(err_t **err, object_t *vec, int index, object_t *dest);
+err_t *object_vector_index(err_t **err, object_t *vec, int index, object_t *dest);
 object_t *object_vector_ref_index(err_t **err, object_t *vec, int index);
 enum_object_type_t object_vector_type(err_t **err, object_t *vec);
 size_t object_vector_count(err_t **err, object_t *vec);
@@ -179,11 +160,11 @@ err_t *object_verbose(err_t** err, object_t* obj, int recursive, size_t indentat
 err_t *object_mark(err_t **err, object_t *obj, size_t mark, size_t limit);
 err_t *object_ptr_rebase(err_t **err, object_t **pobj, object_t *old_pool, size_t old_pool_size, object_t *new_pool);
 err_t *object_rebase(err_t **err, object_t *obj, object_t *old_pool, size_t old_pool_size, object_t *new_pool);
-err_t *object_move(err_t **err, object_t *obj_old, object_t *obj_new);
-err_t *object_part_move(err_t **err, void *part_src, void *part_dst, enum_object_type_t type);
 
 err_t *object_ptr_gc_relink(err_t **err, object_t **pobj);
 err_t *object_gc_relink(err_t **err, object_t *obj);
-// err_t *obj_ptr_fix_gc_broken(err_t **err, object_t **pobj);
-// err_t *object_fix_gc_broken(err_t **err, object_t *obj);
+
+//TODO remove
+err_t *object_move(err_t **err, object_t *obj_old, object_t *obj_new);
+
 #endif

@@ -21,7 +21,7 @@ typedef struct gc_manager_t_decl{
 } gc_manager_t;
 err_t *gc_manager_init(err_t **err, gc_manager_t *manager);
 err_t *gc_manager_halt(err_t **err, gc_manager_t *manager);
-object_ref_part_t *gc_manager_root(err_t **err, gc_manager_t *manager);
+object_t *gc_manager_root(gc_manager_t *manager);
 
 
 void *mem_pack(void *ptr);
@@ -50,7 +50,7 @@ object_t *gc_manager_object_array_expand(err_t **err, gc_manager_t *gcm, object_
 
 err_t *gc_manager_mark(err_t **err, gc_manager_t *manager);
 
-err_t *gc_manager_compact(err_t **err, gc_manager_t *manager);
+err_t *gc_manager_compact(err_t **err, gc_manager_t *manager, object_t *compact_dest, size_t dest_pool_size);
 
 err_t *gc_gc(err_t **err, gc_manager_t *manager);
 
