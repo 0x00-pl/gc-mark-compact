@@ -7,6 +7,7 @@
 #include "pl_err.h"
 
 
+
 // typename
 const char *object_typename(enum_object_type_t type){
   switch(type){
@@ -235,7 +236,7 @@ size_t object_sizeof(err_t **err, enum_object_type_t obj_type){
 
 size_t object_array_count(err_t **err, object_t *obj){
   if(obj == NULL) {return 0;}
-  
+
   size_t value_size = obj->size - sizeof(object_header_t);
   return value_size==0 ? 0 : value_size / object_sizeof_part(err, obj->type);
 }
@@ -244,7 +245,7 @@ void* object_array_index(err_t **err, object_t *obj, size_t index){
   size_t obj_addr = (size_t)obj;
   size_t ret_addr = obj_addr + sizeof(object_header_t) + index * object_sizeof_part(err, obj->type);
   if(ret_addr >= obj_addr + obj->size) {return NULL;}
-  
+
   PL_FUNC_END_EX(,ret_addr=0);
   return (void*)ret_addr;
 }
@@ -254,7 +255,7 @@ void* object_array_index(err_t **err, object_t *obj, size_t index){
 err_t *object_vector_pop(err_t **err, object_t *vec){
   object_type_check(err, vec, TYPE_VECTOR); PL_CHECK;
   if(vec->part._vector.count == 0) {return *err;}
-  vec->part._vector.count--;  
+  vec->part._vector.count--;
   object_halt_nth(err, vec->part._vector.pdata, (int)vec->part._vector.count);
   PL_FUNC_END
   return *err;
@@ -267,10 +268,10 @@ object_t *object_vector_to_array(err_t **err, object_t *vec, struct gc_manager_t
   return NULL;
 }
 
-err_t *object_vector_index(err_t **err, object_t *vec, int index, object_t *dest){  
+err_t *object_vector_index(err_t **err, object_t *vec, int index, object_t *dest){
   // type check
   object_type_check(err, vec, TYPE_VECTOR); PL_CHECK;
-  
+
   if(index<0) {index = (int)vec->part._vector.count + index;}
   if(dest != NULL){
     object_type_check(err, vec->part._vector.pdata, dest->type); PL_CHECK;
@@ -286,13 +287,13 @@ object_t *object_vector_ref_index(err_t **err, object_t *vector, int index){
   object_type_check(err, vector, TYPE_VECTOR); PL_CHECK;
   object_t *ptr = NULL;
   if(index<0) {index = (int)vector->part._vector.count + index;}
-  
+
   if(vector->part._vector.pdata != NULL){
     // type check
     object_type_check(err, vector->part._vector.pdata, TYPE_REF); PL_CHECK;
     ptr = OBJ_ARR_AT(vector->part._vector.pdata, _ref, index).ptr;
   }
-  
+
   PL_FUNC_END_EX(, ptr=NULL)
   return ptr;
 }
@@ -302,15 +303,15 @@ err_t *object_vector_push(err_t **err, struct gc_manager_t_decl *gcm, object_t *
   size_t i;
   size_t max_count;
   object_t *new_data = NULL;
-  
+
   if(item == NULL) {return *err;}
   gs = gc_manager_stack_object_get_depth(gcm);
   gc_manager_stack_object_push(err, gcm, &vec); PL_CHECK;
   gc_manager_stack_object_push(err, gcm, &item); PL_CHECK;
   gc_manager_stack_object_push(err, gcm, &new_data); PL_CHECK;
-  
+
   object_type_check(err, vec, TYPE_VECTOR); PL_CHECK;
-  
+
   // able to chage type with size == 0
   if(vec->part._vector.count == 0){
     new_data = gc_manager_object_array_alloc(err, gcm, item->type, 1); PL_CHECK;
@@ -318,7 +319,7 @@ err_t *object_vector_push(err_t **err, struct gc_manager_t_decl *gcm, object_t *
   }else{
     // type check
     object_type_check(err, vec->part._vector.pdata, item->type); PL_CHECK;
-    
+
     max_count = object_array_count(err, vec->part._vector.pdata); PL_CHECK;
     // extend pdata
     if(vec->part._vector.count+1 > max_count){
@@ -329,21 +330,25 @@ err_t *object_vector_push(err_t **err, struct gc_manager_t_decl *gcm, object_t *
       vec->part._vector.pdata = new_data;
     }
   }
-  
-  object_copy_nth(err, item, 0, vec->part._vector.pdata, (int)vec->part._vector.count); PL_CHECK;  
+
+  object_copy_nth(err, item, 0, vec->part._vector.pdata, (int)vec->part._vector.count); PL_CHECK;
   vec->part._vector.count++;
-  
+
   PL_FUNC_END_EX(gc_manager_stack_object_balance(gcm,gs),);
   return *err;
 }
 
 err_t *object_vector_ref_push(err_t **err, struct gc_manager_t_decl *gcm, object_t *vec, object_t *item){
   size_t gs;
+  object_t *ref_ = NULL;
   gs = gc_manager_stack_object_get_depth(gcm);
   gc_manager_stack_object_push(err, gcm, &vec); PL_CHECK;
-  
-  object_vector_push(err, gcm, vec, gc_manager_object_alloc_ref(err, gcm, item)); PL_CHECK;
-  
+  gc_manager_stack_object_push(err, gcm, &item); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &ref_); PL_CHECK;
+
+  ref_ = gc_manager_object_alloc_ref(err, gcm, item);
+  object_vector_push(err, gcm, vec, ref_); PL_CHECK;
+
   PL_FUNC_END
   gc_manager_stack_object_balance(gcm,gs);
   return *err;
@@ -368,7 +373,7 @@ static size_t print_indentation(size_t indentation){
 err_t *object_verbose(err_t **err, object_t *obj, int recursive, size_t indentation, size_t limit){
   size_t count;
   size_t i;
-  
+
   if(obj==NULL){
     print_indentation(indentation);
     printf("NULL\n");
@@ -376,9 +381,9 @@ err_t *object_verbose(err_t **err, object_t *obj, int recursive, size_t indentat
   }
   count = object_array_count(err, obj); PL_CHECK;
   if(limit!=0 && limit<count) {count=limit;}
-  
+
   print_indentation(indentation);
-  printf("@%p size: %zu ", obj, obj->size);
+  printf("@%p M:%d size: "FMT_SIXE_T" ", obj, obj->mark, obj->size);
   switch(obj->type){
     case TYPE_RAW:
       printf("type: raw\n");
@@ -428,7 +433,7 @@ err_t *object_verbose(err_t **err, object_t *obj, int recursive, size_t indentat
       if(recursive>0){
         for(i=0; i<count; i++){
           print_indentation(indentation+1);
-          printf("{count:%zu} \n", OBJ_ARR_AT(obj, _vector, i).count);
+          printf("{count:"FMT_SIXE_T"} \n", OBJ_ARR_AT(obj, _vector, i).count);
           if(OBJ_ARR_AT(obj, _vector, i).count > 0){
             object_verbose(err, OBJ_ARR_AT(obj, _vector, i).pdata, recursive-1, indentation+2, OBJ_ARR_AT(obj, _vector, i).count); PL_CHECK;
           }
@@ -436,7 +441,7 @@ err_t *object_verbose(err_t **err, object_t *obj, int recursive, size_t indentat
       }else{
         for(i=0; i<count; i++){
           print_indentation(indentation+1);
-          printf("{count:%zu} \n", OBJ_ARR_AT(obj, _vector, i).count);
+          printf("{count:"FMT_SIXE_T" \n", OBJ_ARR_AT(obj, _vector, i).count);
         }
       }
       break;
@@ -468,17 +473,17 @@ err_t *object_verbose(err_t **err, object_t *obj, int recursive, size_t indentat
 
 err_t *object_mark(err_t **err, object_t *obj, size_t mark, size_t limit){
   size_t count;
-  
+
   if(limit == 0) {return *err;}
   if(obj==NULL) {return *err;}
   if(obj->mark == mark) {return *err;}
-  
+
   obj->mark = mark;
-  
+
   count = object_array_count(err, obj); PL_CHECK
   if(limit<count) {count = limit;}
   if(count == 0) {goto fin;}
-  
+
   switch(obj->type){
   case TYPE_RAW:
   case TYPE_INT:
@@ -490,19 +495,19 @@ err_t *object_mark(err_t **err, object_t *obj, size_t mark, size_t limit){
       object_mark(err, OBJ_ARR_AT(obj, _symbol, count).name, mark, UINT_MAX); PL_CHECK;
     }
     break;
-    
+
   case TYPE_REF:
     while(count-->0){
       object_mark(err, OBJ_ARR_AT(obj, _ref, count).ptr, mark, UINT_MAX); PL_CHECK;
     }
     break;
-    
+
   case TYPE_VECTOR:
     while(count-->0){
       object_mark(err, OBJ_ARR_AT(obj, _vector, count).pdata, mark, OBJ_ARR_AT(obj, _vector, count).count); PL_CHECK;
     }
     break;
-    
+
   default:
     PL_ASSERT(0, err_typecheck);
     break;
@@ -523,17 +528,20 @@ err_t *object_move(err_t **err, object_t *obj_old, object_t *obj_new){
   return *err;
 }
 
-err_t *object_ptr_gc_relink(err_t **err, object_t **pobj){
+err_t *object_ptr_gc_relink(err_t **err, object_t **pobj, char *dest_pool, size_t dest_pool_maxsize){
   PL_ASSERT_NOT_NULL(pobj);
   if(*pobj == NULL) {goto fin;}
   if((*pobj)->move_dest == NULL) {goto fin;}
-  *pobj = (*pobj)->move_dest;
+  PL_ASSERT(dest_pool <= (char*)(*pobj)->move_dest, err_out_of_range);
+  PL_ASSERT((char*)(*pobj)->move_dest < dest_pool+dest_pool_maxsize, err_out_of_range);
+
+  *pobj = (*pobj)->move_dest;  // TODO unsure *pobg run this only once
   PL_FUNC_END
   return *err;
 }
-err_t *object_gc_relink(err_t **err, object_t *obj){
+err_t *object_gc_relink(err_t **err, object_t *obj, char *dest_pool, size_t dest_pool_maxsize){
   size_t count;
-  
+
   PL_ASSERT_NOT_NULL(obj);
   count = object_array_count(err, obj); PL_CHECK;
   if(count == 0) {goto fin;}
@@ -541,17 +549,17 @@ err_t *object_gc_relink(err_t **err, object_t *obj){
   switch(obj->type){
   case TYPE_SYMBOL:
     while(count-->0){
-      object_ptr_gc_relink(err, &(OBJ_ARR_AT(obj, _symbol, count).name)); PL_CHECK;
+      object_ptr_gc_relink(err, &(OBJ_ARR_AT(obj, _symbol, count).name), dest_pool, dest_pool_maxsize); PL_CHECK;
     }
     break;
   case TYPE_REF:
     while(count-->0){
-      object_ptr_gc_relink(err, &(OBJ_ARR_AT(obj, _ref, count).ptr)); PL_CHECK;
+      object_ptr_gc_relink(err, &(OBJ_ARR_AT(obj, _ref, count).ptr), dest_pool, dest_pool_maxsize); PL_CHECK;
     }
     break;
   case TYPE_VECTOR:
     while(count-->0){
-      object_ptr_gc_relink(err, &(OBJ_ARR_AT(obj, _vector, count).pdata)); PL_CHECK;
+      object_ptr_gc_relink(err, &(OBJ_ARR_AT(obj, _vector, count).pdata), dest_pool, dest_pool_maxsize); PL_CHECK;
     }
     break;
   case TYPE_RAW:
@@ -573,24 +581,24 @@ err_t *object_ptr_rebase(err_t **err, object_t **pobj, object_t *old_pool, size_
   size_t new_pool_addr     = (size_t)new_pool;
   size_t pobj_addr         = (size_t)*pobj;
   size_t new_pobj_addr;
-  
+
   if(pobj_addr<old_pool_addr || old_pool_end_addr<=pobj_addr) {return 0;}
-  
+
   new_pobj_addr = pobj_addr - old_pool_addr + new_pool_addr;
 
   *pobj = (object_t*)new_pobj_addr;
-  
+
   PL_FUNC_END
   return *err;
 }
 
 err_t *object_rebase(err_t **err, object_t *obj, object_t *old_pool, size_t old_pool_size, object_t *new_pool){
   size_t count;
-  
+
   PL_ASSERT_NOT_NULL(obj);
   count = object_array_count(err, obj); PL_CHECK;
   if(count == 0) {return *err;}
-  
+
   switch(obj->type){
   case TYPE_RAW:
   case TYPE_INT:
@@ -599,26 +607,26 @@ err_t *object_rebase(err_t **err, object_t *obj, object_t *old_pool, size_t old_
     break;
   case TYPE_SYMBOL:
     while(count --> 0){
-      object_ptr_rebase(err, &(OBJ_ARR_AT(obj, _symbol, count).name), old_pool, old_pool_size, new_pool); PL_CHECK 
+      object_ptr_rebase(err, &(OBJ_ARR_AT(obj, _symbol, count).name), old_pool, old_pool_size, new_pool); PL_CHECK
     }
     break;
-    
+
   case TYPE_REF:
     while(count --> 0){
-      object_ptr_rebase(err, &(OBJ_ARR_AT(obj, _ref, count).ptr), old_pool, old_pool_size, new_pool); PL_CHECK 
+      object_ptr_rebase(err, &(OBJ_ARR_AT(obj, _ref, count).ptr), old_pool, old_pool_size, new_pool); PL_CHECK
     }
     break;
-    
+
   case TYPE_VECTOR:
     while(count --> 0){
-      object_ptr_rebase(err, &(OBJ_ARR_AT(obj, _vector, count).pdata), old_pool, old_pool_size, new_pool); PL_CHECK 
+      object_ptr_rebase(err, &(OBJ_ARR_AT(obj, _vector, count).pdata), old_pool, old_pool_size, new_pool); PL_CHECK
     }
     break;
   default:
     PL_ASSERT(0, err_typecheck);
     break;
   }
-  
+
   PL_FUNC_END
   return *err;
 }

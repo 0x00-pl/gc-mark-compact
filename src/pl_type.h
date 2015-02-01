@@ -3,6 +3,7 @@
 
 #include <limits.h>
 #include <stddef.h>
+#include "pl_plandform.h"
 #include "pl_err.h"
 
 enum type_e{
@@ -154,8 +155,8 @@ err_t *object_mark(err_t **err, object_t *obj, size_t mark, size_t limit);
 err_t *object_ptr_rebase(err_t **err, object_t **pobj, object_t *old_pool, size_t old_pool_size, object_t *new_pool);
 err_t *object_rebase(err_t **err, object_t *obj, object_t *old_pool, size_t old_pool_size, object_t *new_pool);
 
-err_t *object_ptr_gc_relink(err_t **err, object_t **pobj);
-err_t *object_gc_relink(err_t **err, object_t *obj);
+err_t *object_ptr_gc_relink(err_t **err, object_t **pobj, char *dest_pool, size_t dest_pool_maxsize);
+err_t *object_gc_relink(err_t **err, object_t *obj, char *dest_pool, size_t dest_pool_maxsize);
 
 err_t *object_move(err_t **err, object_t *obj_old, object_t *obj_new);
 

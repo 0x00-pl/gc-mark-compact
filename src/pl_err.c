@@ -1,9 +1,10 @@
 #include "pl_err.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include "pl_plandform.h"
 
 
-int err_print(err_t *err){  
+int err_print(err_t *err){
   if(err == NULL){
     printf("\n\n");
     return 0;
@@ -14,12 +15,12 @@ int err_print(err_t *err){
   if(err->extra_message != NULL){
     printf("msg: %s\n", err->extra_message);
   }
-  
+
   if(err->file != NULL){
-    printf("in file:%s line:%zu \n", err->file, err->line);
+    printf("in file:%s line:"FMT_SIXE_T" \n", err->file, err->line);
   }
   err_print(err->inner);
-  
+
   return 0;
 }
 
