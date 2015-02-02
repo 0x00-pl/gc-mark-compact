@@ -60,7 +60,6 @@ err_t *op_free_global(err_t **err){
 }
 
 int object_is_nil(err_t **err, object_t *obj){
-
   PL_ASSERT_NOT_NULL(obj);
   if(obj == g_nil) {return 1;}
   switch(obj->type){

@@ -363,6 +363,30 @@ int object_str_eq(object_t *s1, object_t *s2){
   return strncmp(s1->part._str.str, s2->part._str.str, s1->part._str.size) == 0;
 }
 
+int object_num_eq(object_t *o1, object_t *o2){
+  object_float_value_t v1;
+  object_float_value_t v2;
+  
+  if(o1==o2) {return 1;}
+  if(o1==NULL || o2==NULL) {return 0;}
+  if(o1->type==TYPE_INT){
+    v1 = (object_float_value_t)o1->part._int.value;
+  }else if(o1->type==TYPE_FLOAT){
+    v1 = (object_float_value_t)o1->part._float.value;
+  }else{
+    return 0;
+  }
+  if(o2->type==TYPE_INT){
+    v2 = (object_float_value_t)o2->part._int.value;
+  }else if(o2->type==TYPE_FLOAT){
+    v2 = (object_float_value_t)o2->part._float.value;
+  }else{
+    return 0;
+  }
+  
+  return ((v1-v2)>-0.0000001) && ((v1-v2)<0.0000001);
+}
+
 // verbose
 static size_t print_indentation(size_t indentation){
   while(indentation-->0){
@@ -383,7 +407,7 @@ err_t *object_verbose(err_t **err, object_t *obj, int recursive, size_t indentat
   if(limit!=0 && limit<count) {count=limit;}
 
   print_indentation(indentation);
-  printf("@%p M:%d size: "FMT_SIXE_T" ", obj, obj->mark, obj->size);
+  printf("@%p M:"FMT_SIXE_T" size: "FMT_SIXE_T" ", obj, obj->mark, obj->size);
   switch(obj->type){
     case TYPE_RAW:
       printf("type: raw\n");

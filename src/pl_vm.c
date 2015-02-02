@@ -103,7 +103,7 @@ int vm_step(err_t **err, object_t *vm, gc_manager_t *gcm){
     stack_top = gc_manager_object_alloc(err, gcm, TYPE_REF); PL_CHECK;
     object_vector_top(err, stack, stack_top); PL_CHECK;
     object_vector_pop(err, stack); PL_CHECK;
-    if(!object_is_nil(err, stack_top->part._ref.ptr)){
+    if(object_is_nil(err, stack_top->part._ref.ptr)){
       object_tuple_frame_set_pc(err, top_frame, arg1->part._int.value); PL_CHECK;
     }
   }else if(cur_code == op_call){
@@ -172,7 +172,10 @@ err_t *vm_add_stdlib(err_t **err, gc_manager_t *gcm, object_t *vm){
 
   top_frame = object_tuple_vm_get_top_frame(err, vm); PL_CHECK;
 
-  add_builtin_func(err, gcm, top_frame, "+", &vm_step_op_call_addi);
+  add_builtin_func(err, gcm, top_frame, "=", &vm_step_op_call_eq);
+  add_builtin_func(err, gcm, top_frame, "+", &vm_step_op_call_add);
+  add_builtin_func(err, gcm, top_frame, "-", &vm_step_op_call_sub);
+  add_builtin_func(err, gcm, top_frame, "*", &vm_step_op_call_mul);
   add_builtin_func(err, gcm, top_frame, "display", &vm_step_op_call_display);
 
   PL_FUNC_END;
@@ -199,6 +202,7 @@ err_t *vm_verbose_cur_code(err_t **err, gc_manager_t *gcm, object_t *vm){
   arg1 = object_tuple_frame_get_code(err, top_frame, 1); PL_CHECK;
   pc = object_tuple_frame_get_pc(err, top_frame); PL_CHECK;
 
+  printf("\n === code ===\n");
   printf("[%ld]:", pc->part._int.value);
   object_verbose(err, cur_code, 3, 0, 0);
   object_verbose(err, arg1, 3, 4, 0);

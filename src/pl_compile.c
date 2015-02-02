@@ -100,9 +100,9 @@ object_t *compile_exp(err_t **err, gc_manager_t *gcm, object_t *exp, object_t *c
     }
     else if(parser_symbol_eq(func_keyword, "if")){
       if(args_count == 3){
-        // push sym(if)
-        object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
-        object_vector_ref_push(err, gcm, code_vector, g_if); PL_CHECK;
+//         // push sym(if)
+//         object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK; //TODO remove
+//         object_vector_ref_push(err, gcm, code_vector, g_if); PL_CHECK;
 
         // <exp[1]>
         compile_exp(err, gcm, OBJ_ARR_AT(exp,_ref,1).ptr, code_vector); PL_CHECK;
@@ -120,9 +120,9 @@ object_t *compile_exp(err_t **err, gc_manager_t *gcm, object_t *exp, object_t *c
         object_int_init(err, OBJ_ARR_AT(code_vector->part._vector.pdata, _ref, if_endif_index).ptr, (object_int_value_t)code_vector->part._vector.count); PL_CHECK;
 
       }else if(args_count == 4){
-        // push sym(if)
-        object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
-        object_vector_ref_push(err, gcm, code_vector, g_if); PL_CHECK;
+//         // push sym(if)
+//         object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK; //TODO remove
+//         object_vector_ref_push(err, gcm, code_vector, g_if); PL_CHECK;
 
         // <exp[1]>
         compile_exp(err, gcm, OBJ_ARR_AT(exp,_ref,1).ptr, code_vector); PL_CHECK;

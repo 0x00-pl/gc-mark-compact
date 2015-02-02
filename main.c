@@ -1,3 +1,7 @@
+/* ***this file is useless*** */
+/* ***this file is useless*** */
+/* ***this file is useless*** */
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -51,7 +55,7 @@ err_t *run_code(err_t **err, gc_manager_t *gcm, const char *text){
 }
 
 
-int main(int argc, char *argv[]) {
+int nnmain(int argc, char *argv[]) {
   (void)argc;(void)argv;
 	err_t *derr = NULL;
 	err_t **err = &derr;

@@ -138,6 +138,7 @@ size_t object_vector_count(err_t **err, object_t *vec);
 
 //object str
 int object_str_eq(object_t *s1, object_t *s2);
+int object_num_eq(object_t *o1, object_t *o2);
 
 // object size
 size_t object_sizeof(err_t **err, enum_object_type_t obj_type);
