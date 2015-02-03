@@ -179,6 +179,12 @@ const char *test_code_1(){
 (display (fact 4))\n\
     )";
 }
+const char *test_code_2(){
+  return "(\n\
+(cond (0 0) (1 1))\n\
+\n\
+    )";
+}
 
 int main(int argc, char **argv){
   (void)argc;(void)argv;
@@ -210,7 +216,8 @@ int main(int argc, char **argv){
 //   test_vm_1(err, gcm, "((define inc (lambda (x)(+ x 1))) (display (inc 1)))");
 //   test_vm_1(err, gcm, "((define addn (lambda (x)(lambda (y) (+ x y)))) (define add1 (addn 1)) (display (add1 1)))");
 //   test_vm_1(err, gcm, "((display (if 1 2 3)))");
-  test_vm_1(err, gcm, test_code_1());
+//   test_vm_1(err, gcm, test_code_1());
+  test_vm_1(err, gcm, test_code_2());
   
   gc_manager_halt(err, gcm); PL_CHECK;
   

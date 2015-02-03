@@ -19,9 +19,12 @@ int parser_symbol_eq(object_t *symbol, const char *str){
 object_t *compile_exp(err_t **err, gc_manager_t *gcm, object_t *exp, object_t *code_vector){
   object_t *args_count_obj = NULL;
   object_t *func_keyword = NULL;
+  object_t *cond_exp_pair = NULL;
+  object_t *lambda_object_lambda = NULL;
+  object_t *pc_next = NULL;
+  object_t *pc_end = NULL;
   size_t if_else_index;
   size_t if_endif_index;
-  object_t *lambda_object_lambda = NULL;
   size_t gcm_stack_depth;
   size_t args_count = 0;
   size_t i;
@@ -31,7 +34,10 @@ object_t *compile_exp(err_t **err, gc_manager_t *gcm, object_t *exp, object_t *c
   gc_manager_stack_object_push(err, gcm, &code_vector); PL_CHECK;
   gc_manager_stack_object_push(err, gcm, &func_keyword); PL_CHECK;
   gc_manager_stack_object_push(err, gcm, &args_count_obj); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &cond_exp_pair); PL_CHECK;
   gc_manager_stack_object_push(err, gcm, &lambda_object_lambda); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &pc_next); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &pc_end); PL_CHECK;
 
   args_count_obj = gc_manager_object_alloc(err, gcm, TYPE_INT); PL_CHECK;
   object_int_init(err, args_count_obj, (object_int_value_t)-1); PL_CHECK;
@@ -100,10 +106,6 @@ object_t *compile_exp(err_t **err, gc_manager_t *gcm, object_t *exp, object_t *c
     }
     else if(parser_symbol_eq(func_keyword, "if")){
       if(args_count == 3){
-//         // push sym(if)
-//         object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK; //TODO remove
-//         object_vector_ref_push(err, gcm, code_vector, g_if); PL_CHECK;
-
         // <exp[1]>
         compile_exp(err, gcm, OBJ_ARR_AT(exp,_ref,1).ptr, code_vector); PL_CHECK;
 
@@ -120,10 +122,6 @@ object_t *compile_exp(err_t **err, gc_manager_t *gcm, object_t *exp, object_t *c
         object_int_init(err, OBJ_ARR_AT(code_vector->part._vector.pdata, _ref, if_endif_index).ptr, (object_int_value_t)code_vector->part._vector.count); PL_CHECK;
 
       }else if(args_count == 4){
-//         // push sym(if)
-//         object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK; //TODO remove
-//         object_vector_ref_push(err, gcm, code_vector, g_if); PL_CHECK;
-
         // <exp[1]>
         compile_exp(err, gcm, OBJ_ARR_AT(exp,_ref,1).ptr, code_vector); PL_CHECK;
 
@@ -153,6 +151,48 @@ object_t *compile_exp(err_t **err, gc_manager_t *gcm, object_t *exp, object_t *c
         goto fin;
       }
 
+    }else if(parser_symbol_eq(func_keyword, "cond")){
+      // <code test1>
+      // jn :next1
+      // <code val1>
+      // jmp :end
+      //next1:
+      // <code test2>
+      // jn :next2
+      // <code val2>
+      // jmp :end
+      //next2:
+      // push g_nil
+      //end:
+      pc_end = gc_manager_object_alloc(err, gcm, TYPE_INT); PL_CHECK;
+      object_int_init(err, pc_end, -1);
+      // for each cond
+      for(i=1; i<args_count; i++){
+        cond_exp_pair = OBJ_ARR_AT(exp,_ref,i).ptr;
+        // <code test1>
+        compile_exp(err, gcm, OBJ_ARR_AT(cond_exp_pair,_ref,0).ptr, code_vector); PL_CHECK;
+        
+        // jn :next
+        pc_next = gc_manager_object_alloc(err, gcm, TYPE_INT); PL_CHECK;
+        object_int_init(err, pc_next, -1);
+        object_vector_ref_push(err, gcm, code_vector, op_jn); PL_CHECK;
+        object_vector_ref_push(err, gcm, code_vector, pc_next); PL_CHECK;
+        
+        // <code val1>
+        compile_exp(err, gcm, OBJ_ARR_AT(cond_exp_pair,_ref,1).ptr, code_vector); PL_CHECK;
+        
+        // jmp :end
+        object_vector_ref_push(err, gcm, code_vector, op_jmp); PL_CHECK;
+        object_vector_ref_push(err, gcm, code_vector, pc_end); PL_CHECK;
+        
+        // next:
+        object_int_init(err, pc_next, (object_int_value_t)code_vector->part._vector.count);
+      }
+      //add last nil
+      object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
+      object_vector_ref_push(err, gcm, code_vector, g_nil); PL_CHECK;
+      // end:
+      object_int_init(err, pc_end, (object_int_value_t)code_vector->part._vector.count); PL_CHECK;
     }
     else if(parser_symbol_eq(func_keyword, "set!")){
       if(args_count != 3){
