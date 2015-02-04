@@ -1,6 +1,7 @@
 #include "pl_op_code.h"
 
 #include <stdlib.h>
+#include <math.h>
 #include "pl_gc.h"
 #include "pl_type.h"
 
@@ -65,10 +66,12 @@ int object_is_nil(err_t **err, object_t *obj){
   switch(obj->type){
     case TYPE_INT:
       return obj->part._int.value == 0;
-
     case TYPE_FLOAT:
-      return obj->part._float.value < 0.0000001 && obj->part._float.value > -0.0000001 /*|| isnan(float_part->value) TODO */;
-
+      return ( obj->part._float.value < 0.0000001 && obj->part._float.value > -0.0000001 ) || isnan(obj->part._float.value);
+    case TYPE_STR:
+      return obj->part._str.size == 0;
+    case TYPE_SYMBOL:
+      return obj->part._symbol.name == NULL || obj->part._symbol.name->part._str.size == 0;
     default:
       return 1;
   }

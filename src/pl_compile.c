@@ -381,10 +381,8 @@ object_t *compile_lambda(err_t **err, gc_manager_t *gcm, object_t *lambda_exp){
 
   exp_code_vector = gc_manager_object_alloc(err, gcm, TYPE_VECTOR); PL_CHECK;
   object_vector_init(err, exp_code_vector); PL_CHECK;
-
   compile_exp(err, gcm, OBJ_ARR_AT(lambda_exp,_ref,2).ptr, exp_code_vector); PL_CHECK;
   object_vector_ref_push(err, gcm, exp_code_vector, op_ret); PL_CHECK;
-
   exp_code = object_vector_to_array(err, exp_code_vector, gcm);
 
   lambda_argsname = array_ref_symbol_2_array_symbol(err, gcm, OBJ_ARR_AT(lambda_exp,_ref,1).ptr); PL_CHECK;

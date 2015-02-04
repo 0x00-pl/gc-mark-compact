@@ -173,10 +173,13 @@ err_t *vm_add_stdlib(err_t **err, gc_manager_t *gcm, object_t *vm){
   top_frame = object_tuple_vm_get_top_frame(err, vm); PL_CHECK;
 
   add_builtin_func(err, gcm, top_frame, "=", &vm_step_op_call_eq);
+  add_builtin_func(err, gcm, top_frame, "and", &vm_step_op_call_and);
+  add_builtin_func(err, gcm, top_frame, "or", &vm_step_op_call_or);
   add_builtin_func(err, gcm, top_frame, "+", &vm_step_op_call_add);
   add_builtin_func(err, gcm, top_frame, "-", &vm_step_op_call_sub);
   add_builtin_func(err, gcm, top_frame, "*", &vm_step_op_call_mul);
   add_builtin_func(err, gcm, top_frame, "display", &vm_step_op_call_display);
+  add_builtin_func(err, gcm, top_frame, "begin", &vm_step_op_call_begin);
 
   PL_FUNC_END;
   gc_manager_stack_object_balance(gcm, gcm_stack_depth);

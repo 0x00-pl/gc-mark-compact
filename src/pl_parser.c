@@ -114,7 +114,8 @@ object_t *parser_parse_string(err_t **err, gc_manager_t * gcm, const char *text,
     }
   }
   temp_str = (char*)malloc(p-*pos);
-  string_unescape(err, &text[*pos], p-*pos, temp_str); PL_CHECK;
+  // remove first '\"' and last '\"'
+  string_unescape(err, &text[*pos]+1, p-*pos-2, temp_str); PL_CHECK;
   str_ret = gc_manager_object_alloc(err, gcm, TYPE_STR); PL_CHECK;
   object_str_init(err, str_ret, temp_str); PL_CHECK;
 

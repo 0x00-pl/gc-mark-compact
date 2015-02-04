@@ -197,26 +197,28 @@ int main(int argc, char **argv){
   gcm = malloc(sizeof(gc_manager_t));
   gc_manager_init(err, gcm); PL_CHECK;
   
-  //test_gc_1(err, gcm); PL_CHECK;
+  test_gc_1(err, gcm); PL_CHECK;
   test_parsere_1(err, gcm); PL_CHECK;
   printf("\n");
   test_parsere_2(err, gcm, "(lambda (x) (+ x 1))"); PL_CHECK;
   printf("\n");
   test_compile_1(err, gcm, "((define inc (lambda (x) (+ x 1))))"); PL_CHECK;
   
-//   test_vm_1(err, gcm, "((+ 1 1))");  
-//   test_vm_1(err, gcm, "((display (- 1 1)))");  
-//   test_vm_1(err, gcm, "((display (- 1)))");  
-//   test_vm_1(err, gcm, "((display 1))");  
-//   test_vm_1(err, gcm, "((display (+ 1 1)))");  
-//   test_vm_1(err, gcm, "((define a +) (display (a 1 1)))");  
-//   test_vm_1(err, gcm, "((define b (+ 1 1)) (display b))");  
-//   test_vm_1(err, gcm, "((define inc (lambda (x)(+ x 1))))");  
-//   test_vm_1(err, gcm, "((define inc (lambda (x)(+ x 1))) (inc 1))");  
-//   test_vm_1(err, gcm, "((define inc (lambda (x)(+ x 1))) (display (inc 1)))");
-//   test_vm_1(err, gcm, "((define addn (lambda (x)(lambda (y) (+ x y)))) (define add1 (addn 1)) (display (add1 1)))");
-//   test_vm_1(err, gcm, "((display (if 1 2 3)))");
-//   test_vm_1(err, gcm, test_code_1());
+  test_vm_1(err, gcm, "((+ 1 1))");  
+  test_vm_1(err, gcm, "((display \"hello world!\"))");  
+  test_vm_1(err, gcm, "((display (- 1 1)))");  
+  test_vm_1(err, gcm, "((display (- 1)))");  
+  test_vm_1(err, gcm, "((display 1))");  
+  test_vm_1(err, gcm, "((display (+ 1 1)))");  
+  test_vm_1(err, gcm, "((define a +) (display (a 1 1)))");  
+  test_vm_1(err, gcm, "((define b (+ 1 1)) (display b))");  
+  test_vm_1(err, gcm, "((define inc (lambda (x)(+ x 1))))");  
+  test_vm_1(err, gcm, "((define inc (lambda (x)(+ x 1))) (inc 1))");  
+  test_vm_1(err, gcm, "((define inc (lambda (x)(+ x 1))) (display (inc 1)))");
+  test_vm_1(err, gcm, "((define addn (lambda (x)(lambda (y) (+ x y)))) (define add1 (addn 1)) (display (add1 1)))");
+  test_vm_1(err, gcm, "((display (if 1 2 3)))");
+  test_vm_1(err, gcm, "((begin (display 1) (display 2) (display 3)))");
+  test_vm_1(err, gcm, test_code_1());
   test_vm_1(err, gcm, test_code_2());
   
   gc_manager_halt(err, gcm); PL_CHECK;
