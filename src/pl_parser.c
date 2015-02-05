@@ -78,6 +78,30 @@ err_t *string_unescape(err_t **err, const char *src, size_t size, char *dst){
   *dst = '\0';
   return *err;
 }
+
+static object_t *parser_make_quote(err_t **err, gc_manager_t *gcm, object_t *obj){
+  size_t gcm_stack_depth;
+  object_t *ret = NULL;
+  object_t *symbol_quote = NULL;
+  
+  gcm_stack_depth = gc_manager_stack_object_get_depth(gcm);
+  gc_manager_stack_object_push(err, gcm, &obj); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &ret); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &symbol_quote); PL_CHECK;
+  
+  
+  symbol_quote = parser_parse_node_symbol(err, gcm, "quote", 6); PL_CHECK;
+  if(symbol_quote == NULL) {ret = NULL; goto fin;}
+  
+  ret = gc_manager_object_array_alloc(err, gcm, TYPE_REF, 2); PL_CHECK;
+  OBJ_ARR_AT(ret, _ref, 0).ptr = symbol_quote;
+  OBJ_ARR_AT(ret, _ref, 1).ptr = obj;
+  
+  PL_FUNC_END
+  gc_manager_stack_object_balance(gcm, gcm_stack_depth);
+  return ret;
+}
+
 object_t *parser_parse_string(err_t **err, gc_manager_t * gcm, const char *text, size_t *pos){
   size_t gcm_stack_depth;
   size_t p = *pos;
@@ -403,21 +427,30 @@ object_t *parser_parse_node_symbol(err_t **err, gc_manager_t * gcm, const char *
 object_t *parser_parse_node(err_t **err, gc_manager_t * gcm, const char *text, size_t *pos){
   size_t gc_stack_size;
   object_t *ret = NULL;
+  object_t *temp = NULL;
   size_t p;
+  int is_quoted = 0;
 
   gc_stack_size = gc_manager_stack_object_get_depth(gcm);
   gc_manager_stack_object_push(err, gcm, &ret); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &temp); PL_CHECK;
 
   if(parser_is_space(err, text[*pos])){
     parser_skip_space(err, text, pos); PL_CHECK;
   }
+  
   ret = parser_parse_string(err, gcm, text, pos); PL_CHECK;
   if(ret != NULL){
-    goto fin;
+    goto done;
   }
   ret = parser_parse_exp(err, gcm, text, pos); PL_CHECK;
   if(ret != NULL){
-    goto fin;
+    goto done;
+  }
+  
+  if(text[*pos]=='\''){
+    (*pos)++;
+    is_quoted = 1;
   }
 
   p = *pos;
@@ -429,26 +462,35 @@ object_t *parser_parse_node(err_t **err, gc_manager_t * gcm, const char *text, s
     ret = parser_parse_node_symbol(err, gcm, &text[*pos], p-*pos); PL_CHECK;
     if(ret != NULL){
       *pos = p;
-      goto fin;
+      goto done;
     }
   }
   ret = parser_parse_node_sharp(err, gcm, &text[*pos], p-*pos); PL_CHECK;
   if(ret != NULL){
     *pos = p;
-    goto fin;
+    is_quoted = 0;
+    goto done;
   }
   ret = parser_parse_node_number_d(err, gcm, &text[*pos], p-*pos); PL_CHECK;
   if(ret != NULL){
     *pos = p;
-    goto fin;
+    is_quoted = 0;
+    goto done;
   }
   ret = parser_parse_node_symbol(err, gcm, &text[*pos], p-*pos); PL_CHECK;
   if(ret != NULL){
     *pos = p;
-    goto fin;
+    goto done;
   }
 
   PL_ASSERT(0, err_parsing);//unknow error //not match any atom-rule
+  
+  done:
+  if(is_quoted){
+    temp = ret;
+    ret = parser_make_quote(err, gcm, temp); PL_CHECK;
+  }
+  
   PL_FUNC_END
   gc_manager_stack_object_balance(gcm, gc_stack_size);
   return ret;
@@ -456,22 +498,27 @@ object_t *parser_parse_node(err_t **err, gc_manager_t * gcm, const char *text, s
 object_t *parser_parse_exp(err_t **err, gc_manager_t * gcm, const char *text, size_t *pos){
   object_t *ret = NULL;
   object_t *item = NULL;
-  object_t *item_ref = NULL;
+  object_t *temp = NULL;
   size_t p;
   size_t count;
   int is_vector = 0;
+  int is_quoted = 0;
   (void)count;
 
   size_t gs = gc_manager_stack_object_get_depth(gcm);
   gc_manager_stack_object_push(err, gcm, &ret); PL_CHECK;
   gc_manager_stack_object_push(err, gcm, &item); PL_CHECK;
-  gc_manager_stack_object_push(err, gcm, &item_ref); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &temp); PL_CHECK;
 
   if(parser_is_space(err, text[*pos])){
     parser_skip_space(err, text, pos); PL_CHECK;
   }
 
   p = *pos;
+  if(text[p]=='\''){
+    p++;
+    is_quoted = 1;
+  }
   if(text[p]=='#'){
     p++;
     is_vector = 1;
@@ -487,9 +534,7 @@ object_t *parser_parse_exp(err_t **err, gc_manager_t * gcm, const char *text, si
   if(is_vector){
     item = parser_parse_node_symbol(err, gcm, "vector", 6); PL_CHECK;
     if(item == NULL) {ret = NULL; goto fin;}
-    item_ref = gc_manager_object_alloc(err, gcm, TYPE_REF); PL_CHECK;
-    object_ref_init(err, item_ref, item); PL_CHECK;
-    object_vector_push(err, gcm, ret, item_ref); PL_CHECK;
+    object_vector_ref_push(err, gcm, ret, item); PL_CHECK;
   }
 
   while(1){
@@ -501,13 +546,18 @@ object_t *parser_parse_exp(err_t **err, gc_manager_t * gcm, const char *text, si
 
     item = parser_parse_node(err, gcm, text, &p); PL_CHECK;
     if(item == NULL) {ret = NULL; goto fin;}
-    item_ref = gc_manager_object_alloc(err, gcm, TYPE_REF); PL_CHECK;
-    object_ref_init(err, item_ref, item); PL_CHECK;
-    object_vector_push(err, gcm, ret, item_ref); PL_CHECK;
+    object_vector_ref_push(err, gcm, ret, item); PL_CHECK;
   }
 
   count = ret->part._vector.count;
-  ret = object_vector_to_array(err, ret, gcm); PL_CHECK;
+  temp = ret;
+  ret = object_vector_to_array(err, temp, gcm); PL_CHECK;
+  temp = NULL;
+  
+  if(is_quoted){
+    temp = ret;
+    ret = parser_make_quote(err, gcm, temp); PL_CHECK;
+  }
 
   *pos = p;
   PL_FUNC_END_EX(gc_manager_stack_object_balance(gcm,gs), ret=NULL);

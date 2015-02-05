@@ -492,6 +492,41 @@ err_t *object_verbose(err_t **err, object_t *obj, int recursive, size_t indentat
   return *err;
 }
 
+err_t *object_disply(err_t **err, object_t *value){
+  size_t count;
+  size_t i;
+  
+  switch(value->type){
+    case TYPE_INT:
+      printf(FMT_TYPE_INT, value->part._int.value);
+      break;
+    case TYPE_FLOAT:
+      printf(FMT_TYPE_FLOAT, value->part._float.value);
+      break;
+    case TYPE_STR:
+      printf("\"%s\"", value->part._str.str);
+      break;
+    case TYPE_SYMBOL:
+      object_type_check(err, value->part._symbol.name, TYPE_STR); PL_CHECK;
+      printf("%s", value->part._symbol.name->part._str.str);
+      break;
+    case TYPE_REF:
+      printf("(");
+      count = object_array_count(err, value); PL_CHECK;
+      for(i=0; i<count; i++){
+        if(i != 0) {printf(" ");}
+        object_disply(err, OBJ_ARR_AT(value, _ref, i).ptr); PL_CHECK;
+      }
+      printf(")");
+      break;
+    default:
+      object_verbose(err, value, 3, 0, 0); PL_CHECK;
+  }
+  
+  PL_FUNC_END
+  return *err;
+}
+
 
 // object gc support
 

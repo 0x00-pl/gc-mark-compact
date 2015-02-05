@@ -150,6 +150,7 @@ void* object_array_index(err_t **err, object_t *obj, size_t index);
 
 // object verbose
 err_t *object_verbose(err_t** err, object_t* obj, int recursive, size_t indentation, size_t limit);
+err_t *object_disply(err_t **err, object_t *value);
 
 // object gc support
 err_t *object_mark(err_t **err, object_t *obj, size_t mark, size_t limit);

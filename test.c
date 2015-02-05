@@ -206,10 +206,13 @@ int main(int argc, char **argv){
   
   test_vm_1(err, gcm, "((+ 1 1))");  
   test_vm_1(err, gcm, "((display \"hello world!\"))");  
-  test_vm_1(err, gcm, "((display (- 1 1)))");  
+  test_vm_1(err, gcm, "((display (- 1 1)))");
   test_vm_1(err, gcm, "((display (- 1)))");  
   test_vm_1(err, gcm, "((display 1))");  
   test_vm_1(err, gcm, "((display (+ 1 1)))");  
+  test_vm_1(err, gcm, "((display '1))");
+  test_vm_1(err, gcm, "((display 'x))");
+  test_vm_1(err, gcm, "((display '(- 1 '1)))");
   test_vm_1(err, gcm, "((define a +) (display (a 1 1)))");  
   test_vm_1(err, gcm, "((define b (+ 1 1)) (display b))");  
   test_vm_1(err, gcm, "((define inc (lambda (x)(+ x 1))))");  

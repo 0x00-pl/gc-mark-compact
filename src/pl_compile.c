@@ -216,6 +216,13 @@ object_t *compile_exp(err_t **err, gc_manager_t *gcm, object_t *exp, object_t *c
       object_int_init(err, args_count_obj, 3); PL_CHECK;
       object_vector_ref_push(err, gcm, code_vector, args_count_obj); PL_CHECK;
     }
+    else if(parser_symbol_eq(func_keyword, "quote")){
+      if(args_count != 2){
+        // bad syntax
+        goto fin;
+      }
+      compile_quote(err, gcm, OBJ_ARR_AT(exp,_ref,1).ptr ,code_vector); PL_CHECK;
+    }
     else if(parser_symbol_eq(func_keyword, "lambda")){
       if(args_count < 3){
         // bad syntax
@@ -401,6 +408,20 @@ object_t *compile_lambda(err_t **err, gc_manager_t *gcm, object_t *lambda_exp){
   PL_FUNC_END
   gc_manager_stack_object_balance(gcm, gcm_stack_depth);
   return lambda;
+}
+
+err_t *compile_quote(err_t **err, gc_manager_t *gcm, object_t *quoted_exp, object_t *code_vector){
+  size_t gcm_stack_depth;
+  
+  gcm_stack_depth = gc_manager_stack_object_get_depth(gcm);
+  gc_manager_stack_object_push(err, gcm, &quoted_exp); PL_CHECK;
+  
+  object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
+  object_vector_ref_push(err, gcm, code_vector, quoted_exp); PL_CHECK;
+  
+  PL_FUNC_END
+  gc_manager_stack_object_balance(gcm, gcm_stack_depth);
+  return *err;
 }
 
 object_t *compile_global(err_t **err, gc_manager_t *gcm, object_t *exp){

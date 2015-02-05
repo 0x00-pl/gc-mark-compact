@@ -188,9 +188,12 @@ err_t *vm_step_op_call_resolve(err_t **err, gc_manager_t *gcm, object_t *vm, obj
   gc_manager_stack_object_balance(gcm, gcm_stack_depth);
   return *err;
 }
+
+
 err_t *vm_step_op_call_display(err_t **err, gc_manager_t *gcm, object_t *vm, object_t* top_frame, object_t *func, object_t *stack, size_t args_count){
   size_t gcm_stack_depth;
   size_t i;
+  size_t exp_item_count;
   object_t *value = NULL;
 
   gcm_stack_depth = gc_manager_stack_object_get_depth(gcm);
@@ -205,22 +208,8 @@ err_t *vm_step_op_call_display(err_t **err, gc_manager_t *gcm, object_t *vm, obj
   for(i=0; i<args_count; i++){
     object_vector_pop(err, stack); PL_CHECK;
   }
-  switch(value->type){
-    case TYPE_INT:
-      printf(FMT_TYPE_INT, value->part._int.value);
-      break;
-    case TYPE_FLOAT:
-      printf(FMT_TYPE_FLOAT, value->part._float.value);
-      break;
-    case TYPE_STR:
-      printf("%s", value->part._str.str);
-      break;
-    case TYPE_SYMBOL:
-      printf("'%s", value->part._symbol.name->part._str.str);
-      break;
-    default:
-      object_verbose(err, value, 3, 0, 0); PL_CHECK;
-  }
+  
+  object_disply(err, value); PL_CHECK;
 
   object_vector_ref_push(err, gcm, stack, g_nil); PL_CHECK;
   PL_FUNC_END;
