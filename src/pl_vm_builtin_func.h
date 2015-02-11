@@ -16,6 +16,7 @@ err_t *vm_step_op_call_define(err_t **err, gc_manager_t *gcm, object_t *vm, obje
 
 err_t *vm_step_op_call_resolve(err_t **err, gc_manager_t *gcm, object_t *vm, object_t* top_frame, object_t *func, object_t *stack, size_t args_count);
 
+err_t *vm_step_op_call_newline(err_t **err, gc_manager_t *gcm, object_t *vm, object_t* top_frame, object_t *func, object_t *stack, size_t args_count);
 err_t *vm_step_op_call_display(err_t **err, gc_manager_t *gcm, object_t *vm, object_t* top_frame, object_t *func, object_t *stack, size_t args_count);
 
 err_t *vm_step_op_call_eq(err_t **err, gc_manager_t *gcm, object_t *vm, object_t* top_frame, object_t *func, object_t *stack, size_t args_count);
@@ -26,9 +27,15 @@ err_t *vm_step_op_call_mul(err_t **err, gc_manager_t *gcm, object_t *vm, object_
 err_t *vm_step_op_call_and(err_t **err, gc_manager_t *gcm, object_t *vm, object_t* top_frame, object_t *func, object_t *stack, size_t args_count);
 err_t *vm_step_op_call_or(err_t **err, gc_manager_t *gcm, object_t *vm, object_t* top_frame, object_t *func, object_t *stack, size_t args_count);
 
+err_t *vm_step_op_call_l(err_t **err, gc_manager_t *gcm, object_t *vm, object_t* top_frame, object_t *func, object_t *stack, size_t args_count);
+err_t *vm_step_op_call_r(err_t **err, gc_manager_t *gcm, object_t *vm, object_t* top_frame, object_t *func, object_t *stack, size_t args_count);
+err_t *vm_step_op_call_le(err_t **err, gc_manager_t *gcm, object_t *vm, object_t* top_frame, object_t *func, object_t *stack, size_t args_count);
+err_t *vm_step_op_call_re(err_t **err, gc_manager_t *gcm, object_t *vm, object_t* top_frame, object_t *func, object_t *stack, size_t args_count);
+
 err_t *vm_step_op_call_begin(err_t **err, gc_manager_t *gcm, object_t *vm, object_t* top_frame, object_t *func, object_t *stack, size_t args_count);
 
 
+err_t *add_builtin_object(err_t **err, gc_manager_t *gcm, object_t* frame, const char *str_name, object_t *value);
 err_t *add_builtin_func(err_t **err, gc_manager_t *gcm, object_t* frame, const char *str_name, vm_step_op_call_c_function_t builtin_func);
 
 #endif

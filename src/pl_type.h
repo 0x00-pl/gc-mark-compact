@@ -3,7 +3,7 @@
 
 #include <limits.h>
 #include <stddef.h>
-#include "pl_plandform.h"
+#include "pl_plantform.h"
 #include "pl_err.h"
 
 enum type_e{
@@ -107,20 +107,22 @@ err_t *object_halt(err_t **err, object_t *obj);
 
 // object cast
 err_t *object_type_check(err_t **err, object_t *obj, enum_object_type_t type);
-
+object_float_value_t object_get_value(err_t **err, object_t *obj);
 
 // object tuple
 struct gc_manager_t_decl;
 object_t *object_tuple_alloc(err_t **err, struct gc_manager_t_decl *gcm, size_t size);
-err_t *object_member_set_value(err_t **err, object_t *tuple, size_t index, object_t *value);
-void                    *object_member           (err_t **err, object_t *tuple, size_t offset);
-object_raw_part_t       *object_member_raw       (err_t **err, object_t *tuple, size_t offset);
-object_int_part_t       *object_member_int       (err_t **err, object_t *tuple, size_t offset);
-object_float_part_t     *object_member_float     (err_t **err, object_t *tuple, size_t offset);
-object_str_part_t       *object_member_str       (err_t **err, object_t *tuple, size_t offset);
-object_symbol_part_t    *object_member_symbol    (err_t **err, object_t *tuple, size_t offset);
-object_vector_part_t    *object_member_vector    (err_t **err, object_t *tuple, size_t offset);
-object_ref_part_t       *object_member_ref       (err_t **err, object_t *tuple, size_t offset);
+// err_t *object_member_set_value(err_t **err, object_t *tuple, size_t index, object_t *value);
+// void                    *object_member           (err_t **err, object_t *tuple, size_t offset);
+// object_raw_part_t       *object_member_raw       (err_t **err, object_t *tuple, size_t offset);
+// object_int_part_t       *object_member_int       (err_t **err, object_t *tuple, size_t offset);
+// object_float_part_t     *object_member_float     (err_t **err, object_t *tuple, size_t offset);
+// object_str_part_t       *object_member_str       (err_t **err, object_t *tuple, size_t offset);
+// object_symbol_part_t    *object_member_symbol    (err_t **err, object_t *tuple, size_t offset);
+// object_vector_part_t    *object_member_vector    (err_t **err, object_t *tuple, size_t offset);
+// object_ref_part_t       *object_member_ref       (err_t **err, object_t *tuple, size_t offset);
+
+
 
 // object vecter
 struct gc_manager_t_decl;
@@ -147,6 +149,8 @@ size_t object_array_sizeof(err_t **err, enum_object_type_t obj_type, size_t n);
 size_t object_array_count(err_t **err, object_t *obj);
 void* object_array_index(err_t **err, object_t *obj, size_t index);
 #define OBJ_ARR_AT(array, _part_name, index) ((&((array)->part._part_name))[index])
+
+object_t *object_array_slice(err_t **err, struct gc_manager_t_decl *gcm, object_t *obj, size_t new_count_beg, size_t new_count_end);
 
 // object verbose
 err_t *object_verbose(err_t** err, object_t* obj, int recursive, size_t indentation, size_t limit);

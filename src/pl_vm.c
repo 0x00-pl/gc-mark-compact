@@ -3,6 +3,8 @@
 #include "pl_gc.h"
 #include "pl_type.h"
 #include "pl_err.h"
+#include "pl_parser.h"
+#include "pl_compile.h"
 #include "pl_op_code.h"
 #include "pl_vm_builtin_func.h"
 
@@ -172,12 +174,19 @@ err_t *vm_add_stdlib(err_t **err, gc_manager_t *gcm, object_t *vm){
 
   top_frame = object_tuple_vm_get_top_frame(err, vm); PL_CHECK;
 
-  add_builtin_func(err, gcm, top_frame, "=", &vm_step_op_call_eq);
   add_builtin_func(err, gcm, top_frame, "and", &vm_step_op_call_and);
   add_builtin_func(err, gcm, top_frame, "or", &vm_step_op_call_or);
   add_builtin_func(err, gcm, top_frame, "+", &vm_step_op_call_add);
   add_builtin_func(err, gcm, top_frame, "-", &vm_step_op_call_sub);
   add_builtin_func(err, gcm, top_frame, "*", &vm_step_op_call_mul);
+  
+  add_builtin_func(err, gcm, top_frame, "=", &vm_step_op_call_eq);
+  add_builtin_func(err, gcm, top_frame, "<", &vm_step_op_call_l);
+  add_builtin_func(err, gcm, top_frame, ">", &vm_step_op_call_r);
+  add_builtin_func(err, gcm, top_frame, "<=", &vm_step_op_call_le);
+  add_builtin_func(err, gcm, top_frame, ">=", &vm_step_op_call_re);
+  
+  add_builtin_func(err, gcm, top_frame, "newline", &vm_step_op_call_newline);
   add_builtin_func(err, gcm, top_frame, "display", &vm_step_op_call_display);
   add_builtin_func(err, gcm, top_frame, "begin", &vm_step_op_call_begin);
 
@@ -185,6 +194,49 @@ err_t *vm_add_stdlib(err_t **err, gc_manager_t *gcm, object_t *vm){
   gc_manager_stack_object_balance(gcm, gcm_stack_depth);
   return *err;
 }
+
+
+err_t *vm_eval_text(err_t **err, gc_manager_t *gcm, const char *text){
+  size_t gc_stack_size;
+  size_t pos;
+  int done = 0;
+  object_t *parsed_exp = NULL;
+  object_t *parsed_exp_code = NULL; 
+  object_t *vm = NULL; 
+  
+  gc_stack_size = gc_manager_stack_object_get_depth(gcm);
+  gc_manager_stack_object_push(err, gcm, &parsed_exp); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &parsed_exp_code); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &vm); PL_CHECK;
+  
+  pos = 0;
+  parsed_exp = parser_parse_exp(err, gcm, text, &pos); PL_CHECK;
+  parsed_exp_code = compile_global(err, gcm, parsed_exp); PL_CHECK;
+  
+  
+  printf("\n === vm start === \n");
+  
+  
+  vm = vm_alloc(err, gcm, parsed_exp_code); PL_CHECK;
+  
+  vm_add_stdlib(err, gcm, vm); PL_CHECK;
+  
+//   vm_verbose_env(err, gcm, vm); PL_CHECK;
+//   compile_verbose_code(err, gcm, parsed_exp_code, 2);
+    
+  do{
+//        vm_verbose_cur_code(err, gcm, vm); PL_CHECK; // debug
+    done = vm_step(err, vm, gcm); PL_CHECK;
+//        vm_verbose_stack(err, gcm, vm); PL_CHECK; // debug
+  }while(!done);
+  
+  printf("\n === vm end === \n");
+  
+  PL_FUNC_END
+  gc_manager_stack_object_balance(gcm, gc_stack_size);
+  return *err;
+}
+
 
 err_t *vm_verbose_cur_code(err_t **err, gc_manager_t *gcm, object_t *vm){
   size_t gcm_stack_depth;

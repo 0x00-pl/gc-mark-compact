@@ -1,7 +1,7 @@
 #include "pl_err.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "pl_plandform.h"
+#include "pl_plantform.h"
 
 
 int err_print(err_t *err){
@@ -17,7 +17,7 @@ int err_print(err_t *err){
   }
 
   if(err->file != NULL){
-    printf("in file:%s line:"FMT_SIXE_T" \n", err->file, err->line);
+    printf("in file:%s line:"FMT_TYPE_SIZE_T" \n", err->file, err->line);
   }
   err_print(err->inner);
 
@@ -58,4 +58,7 @@ err_t *err_parsing(err_t **err, const char *file, size_t line, const char *extra
 }
 err_t *err_testing(err_t **err, const char *file, size_t line, const char *extra_message){
   return err_new(err, file, line, extra_message, ERR_TESTING);
+}
+err_t *err_io(err_t **err, const char *file, size_t line, const char *extra_message){
+  return err_new(err, file, line, extra_message, ERR_IO);
 }

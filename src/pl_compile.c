@@ -14,6 +14,30 @@ int parser_symbol_eq(object_t *symbol, const char *str){
   return strncmp(str, symbol_name->part._str.str, symbol_name->part._str.size) == 0;
 }
 
+object_t *array_ref_symbol_2_array_symbol(err_t **err, gc_manager_t *gcm, object_t *array_ref_symbol){
+  size_t gcm_stack_depth;
+  size_t count;
+  size_t i;
+  object_t *array_symbol = NULL;
+
+  gcm_stack_depth = gc_manager_stack_object_get_depth(gcm);
+  gc_manager_stack_object_push(err, gcm, &array_ref_symbol); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &array_symbol); PL_CHECK;
+
+  count = object_array_count(err, array_ref_symbol); PL_CHECK;
+  if(count!=0) {object_type_check(err, array_ref_symbol, TYPE_REF); PL_CHECK;}
+
+  array_symbol = gc_manager_object_array_alloc(err, gcm, TYPE_SYMBOL, count);
+
+  for(i=0; i<count; i++){
+    object_type_check(err, OBJ_ARR_AT(array_ref_symbol,_ref,i).ptr, TYPE_SYMBOL); PL_CHECK;
+    object_symbol_init_nth(err, array_symbol, (int)i, OBJ_ARR_AT(array_ref_symbol,_ref,i).ptr->part._symbol.name); PL_CHECK;
+  }
+
+  PL_FUNC_END
+  gc_manager_stack_object_balance(gcm, gcm_stack_depth);
+  return array_symbol;
+}
 
 
 object_t *compile_exp(err_t **err, gc_manager_t *gcm, object_t *exp, object_t *code_vector){
@@ -50,16 +74,22 @@ object_t *compile_exp(err_t **err, gc_manager_t *gcm, object_t *exp, object_t *c
 
   // exp is atom
   if(exp->type != TYPE_REF){
-    // push sym(x)
-    object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
-    object_vector_ref_push(err, gcm, code_vector, exp); PL_CHECK;
+    if(parser_symbol_eq(exp, "else")){
+      // push #t
+      object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
+      object_vector_ref_push(err, gcm, code_vector, exp); PL_CHECK;
+    }else{
+      // push sym(x)
+      object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
+      object_vector_ref_push(err, gcm, code_vector, exp); PL_CHECK;
 
-    if(exp->type == TYPE_SYMBOL){
-      // if it is symbol
-      // call 1
-      object_vector_ref_push(err, gcm, code_vector, op_call); PL_CHECK;
-      object_int_init(err, args_count_obj, (object_int_value_t)1); PL_CHECK;
-      object_vector_ref_push(err, gcm, code_vector, args_count_obj); PL_CHECK;
+      if(exp->type == TYPE_SYMBOL){
+	// if it is symbol
+	// call 1
+	object_vector_ref_push(err, gcm, code_vector, op_call); PL_CHECK;
+	object_int_init(err, args_count_obj, (object_int_value_t)1); PL_CHECK;
+	object_vector_ref_push(err, gcm, code_vector, args_count_obj); PL_CHECK;
+      }
     }
   }else{
     args_count = object_array_count(err, exp); PL_CHECK;
@@ -87,22 +117,28 @@ object_t *compile_exp(err_t **err, gc_manager_t *gcm, object_t *exp, object_t *c
         goto fin;
       }
 
-      // push sym(define)
-      object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
-      object_vector_ref_push(err, gcm, code_vector, g_define); PL_CHECK;
-
-      // push exp[1]
-      object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
-      object_vector_ref_push(err, gcm, code_vector, OBJ_ARR_AT(exp,_ref,1).ptr); PL_CHECK;
-
-      // <exp[2]>
-      compile_exp(err, gcm, OBJ_ARR_AT(exp,_ref,2).ptr, code_vector); PL_CHECK;
-
-      // call 3
-      object_vector_ref_push(err, gcm, code_vector, op_call); PL_CHECK;
-      args_count_obj = gc_manager_object_alloc(err, gcm, TYPE_INT); PL_CHECK;
-      object_int_init(err, args_count_obj, 3); PL_CHECK;
-      object_vector_ref_push(err, gcm, code_vector, args_count_obj); PL_CHECK;
+      if(OBJ_ARR_AT(exp,_ref,1).ptr->type == TYPE_REF){
+	compile_defun(err, gcm, exp, code_vector); PL_CHECK;
+      }else{
+	compile_define(err, gcm, OBJ_ARR_AT(exp,_ref,1).ptr, OBJ_ARR_AT(exp,_ref,2).ptr, code_vector); PL_CHECK;
+      }
+      //TODO remove old code
+//       // push sym(define)
+//       object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
+//       object_vector_ref_push(err, gcm, code_vector, g_define); PL_CHECK;
+// 
+//       // push exp[1]
+//       object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
+//       object_vector_ref_push(err, gcm, code_vector, OBJ_ARR_AT(exp,_ref,1).ptr); PL_CHECK;
+// 
+//       // <exp[2]>
+//       compile_exp(err, gcm, OBJ_ARR_AT(exp,_ref,2).ptr, code_vector); PL_CHECK;
+// 
+//       // call 3
+//       object_vector_ref_push(err, gcm, code_vector, op_call); PL_CHECK;
+//       args_count_obj = gc_manager_object_alloc(err, gcm, TYPE_INT); PL_CHECK;
+//       object_int_init(err, args_count_obj, 3); PL_CHECK;
+//       object_vector_ref_push(err, gcm, code_vector, args_count_obj); PL_CHECK;
     }
     else if(parser_symbol_eq(func_keyword, "if")){
       if(args_count == 3){
@@ -223,28 +259,27 @@ object_t *compile_exp(err_t **err, gc_manager_t *gcm, object_t *exp, object_t *c
       }
       compile_quote(err, gcm, OBJ_ARR_AT(exp,_ref,1).ptr ,code_vector); PL_CHECK;
     }
-    else if(parser_symbol_eq(func_keyword, "lambda")){
-      if(args_count < 3){
-        // bad syntax
-        goto fin;
-      }
-      // push sym(lambda)
-      object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
-      object_vector_ref_push(err, gcm, code_vector, g_mklmd); PL_CHECK;
-
-      // push args = exp[1]
-      object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
-      object_vector_ref_push(err, gcm, code_vector, OBJ_ARR_AT(exp,_ref,1).ptr); PL_CHECK;
-
-      // push code = <compile_lambda(exp)>
-      object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
-      lambda_object_lambda = compile_lambda(err, gcm, exp); PL_CHECK;
-      object_vector_ref_push(err, gcm, code_vector, lambda_object_lambda); PL_CHECK;
-
-      // call 3
-      object_vector_ref_push(err, gcm, code_vector, op_call); PL_CHECK;
-      object_int_init(err, args_count_obj, 3); PL_CHECK;
-      object_vector_ref_push(err, gcm, code_vector, args_count_obj); PL_CHECK;
+    else if(parser_symbol_eq(func_keyword, "lambda")){      
+      compile_lambda(err, gcm, exp, code_vector); PL_CHECK;
+      
+      // TODO remove old code
+//       // push sym(lambda)
+//       object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
+//       object_vector_ref_push(err, gcm, code_vector, g_mklmd); PL_CHECK;
+// 
+//       // push args = exp[1]
+//       object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
+//       object_vector_ref_push(err, gcm, code_vector, OBJ_ARR_AT(exp,_ref,1).ptr); PL_CHECK;
+// 
+//       // push code = <compile_lambda(exp)>
+//       object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
+//       lambda_object_lambda = compile_lambda_object(err, gcm, exp); PL_CHECK;
+//       object_vector_ref_push(err, gcm, code_vector, lambda_object_lambda); PL_CHECK;
+// 
+//       // call 3
+//       object_vector_ref_push(err, gcm, code_vector, op_call); PL_CHECK;
+//       object_int_init(err, args_count_obj, 3); PL_CHECK;
+//       object_vector_ref_push(err, gcm, code_vector, args_count_obj); PL_CHECK;
     }
     else{
       // push args
@@ -264,30 +299,6 @@ object_t *compile_exp(err_t **err, gc_manager_t *gcm, object_t *exp, object_t *c
   return code_vector;
 }
 
-object_t *array_ref_symbol_2_array_symbol(err_t **err, gc_manager_t *gcm, object_t *array_ref_symbol){
-  size_t gcm_stack_depth;
-  size_t count;
-  size_t i;
-  object_t *array_symbol = NULL;
-
-  gcm_stack_depth = gc_manager_stack_object_get_depth(gcm);
-  gc_manager_stack_object_push(err, gcm, &array_ref_symbol); PL_CHECK;
-  gc_manager_stack_object_push(err, gcm, &array_symbol); PL_CHECK;
-
-  count = object_array_count(err, array_ref_symbol); PL_CHECK;
-  if(count!=0) {object_type_check(err, array_ref_symbol, TYPE_REF); PL_CHECK;}
-
-  array_symbol = gc_manager_object_array_alloc(err, gcm, TYPE_SYMBOL, count);
-
-  for(i=0; i<count; i++){
-    object_type_check(err, OBJ_ARR_AT(array_ref_symbol,_ref,i).ptr, TYPE_SYMBOL); PL_CHECK;
-    object_symbol_init_nth(err, array_symbol, (int)i, OBJ_ARR_AT(array_ref_symbol,_ref,i).ptr->part._symbol.name); PL_CHECK;
-  }
-
-  PL_FUNC_END
-  gc_manager_stack_object_balance(gcm, gcm_stack_depth);
-  return array_symbol;
-}
 
 
 err_t *compile_lambda_get_env(err_t **err, gc_manager_t *gcm, object_t *exp, object_t *unresolved_symbol_vector, object_t *resolved_symbol_vector){
@@ -364,7 +375,126 @@ err_t *compile_lambda_get_env(err_t **err, gc_manager_t *gcm, object_t *exp, obj
   return *err;
 }
 
-object_t *compile_lambda(err_t **err, gc_manager_t *gcm, object_t *lambda_exp){
+err_t *compile_lambda(err_t **err, gc_manager_t *gcm, object_t *exp, object_t *code_vector){
+  // (lambda (arg*) (...))
+  size_t gcm_stack_depth;
+  object_t *args_count_obj = NULL;
+  object_t *lambda_object_lambda = NULL;
+
+  gcm_stack_depth = gc_manager_stack_object_get_depth(gcm);
+  gc_manager_stack_object_push(err, gcm, &exp); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &code_vector); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &args_count_obj); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &lambda_object_lambda); PL_CHECK;
+  
+  PL_ASSERT(object_array_count(err,exp)==3, err_out_of_range);
+  
+  // push sym(lambda)
+  object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
+  object_vector_ref_push(err, gcm, code_vector, g_mklmd); PL_CHECK;
+
+  // push args = exp[1]
+  object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
+  object_vector_ref_push(err, gcm, code_vector, OBJ_ARR_AT(exp,_ref,1).ptr); PL_CHECK;
+
+  // push code = <compile_lambda(exp)>
+  object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
+  lambda_object_lambda = compile_lambda_object(err, gcm, exp); PL_CHECK;
+  object_vector_ref_push(err, gcm, code_vector, lambda_object_lambda); PL_CHECK;
+
+  // call 3
+  object_vector_ref_push(err, gcm, code_vector, op_call); PL_CHECK;
+  args_count_obj = gc_manager_object_alloc(err, gcm, TYPE_INT); PL_CHECK;
+  object_int_init(err, args_count_obj, 3); PL_CHECK;
+  object_vector_ref_push(err, gcm, code_vector, args_count_obj); PL_CHECK;
+  
+  PL_FUNC_END
+  gc_manager_stack_object_balance(gcm, gcm_stack_depth);
+  return *err;
+}
+
+err_t *compile_define(err_t **err, gc_manager_t *gcm, object_t *key, object_t *value, object_t *code_vector){
+  // (define key value)
+  size_t gcm_stack_depth;
+  object_t *args_count_obj = NULL;
+
+  gcm_stack_depth = gc_manager_stack_object_get_depth(gcm);
+  gc_manager_stack_object_push(err, gcm, &key); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &value); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &code_vector); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &args_count_obj); PL_CHECK;
+  
+  // push sym(define)
+  object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
+  object_vector_ref_push(err, gcm, code_vector, g_define); PL_CHECK;
+
+  // push exp[1]
+  object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
+  object_vector_ref_push(err, gcm, code_vector, key); PL_CHECK;
+
+  // <exp[2]>
+  compile_exp(err, gcm, value, code_vector); PL_CHECK;
+
+  // call 3
+  object_vector_ref_push(err, gcm, code_vector, op_call); PL_CHECK;
+  args_count_obj = gc_manager_object_alloc(err, gcm, TYPE_INT); PL_CHECK;
+  object_int_init(err, args_count_obj, 3); PL_CHECK;
+  object_vector_ref_push(err, gcm, code_vector, args_count_obj); PL_CHECK;
+  
+  PL_FUNC_END
+  gc_manager_stack_object_balance(gcm, gcm_stack_depth);
+  return *err;
+}
+
+err_t *compile_defun(err_t **err, gc_manager_t *gcm, object_t *exp, object_t *code_vector){
+  // convert (define (func args) (exp)) to (define func (lambda (args) (exp)))
+  size_t gcm_stack_depth;
+  size_t arg_count;
+  object_t *lambda_arg = NULL;
+  object_t *lambda_exp = NULL;
+  object_t *lambda = NULL;
+  object_t *args_count_obj = NULL;
+
+
+  gcm_stack_depth = gc_manager_stack_object_get_depth(gcm);
+  gc_manager_stack_object_push(err, gcm, &exp); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &code_vector); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &lambda_arg); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &lambda_exp); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &lambda); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &args_count_obj); PL_CHECK;
+  
+  lambda_exp = gc_manager_object_array_alloc(err, gcm, TYPE_REF, 3); PL_CHECK;
+  OBJ_ARR_AT(lambda_exp, _ref, 0).ptr = g_lambda;
+  arg_count = object_array_count(err, OBJ_ARR_AT(exp, _ref, 1).ptr); PL_CHECK;
+  lambda_arg = object_array_slice(err, gcm, OBJ_ARR_AT(exp, _ref, 1).ptr, 1, arg_count); PL_CHECK;
+  OBJ_ARR_AT(lambda_exp, _ref, 1).ptr = lambda_arg;
+  OBJ_ARR_AT(lambda_exp, _ref, 2).ptr = OBJ_ARR_AT(exp, _ref, 2).ptr;
+  
+  
+  // push sym(define)
+  object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
+  object_vector_ref_push(err, gcm, code_vector, g_define); PL_CHECK;
+
+  // push exp[1]
+  object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
+  object_vector_ref_push(err, gcm, code_vector, OBJ_ARR_AT(OBJ_ARR_AT(exp, _ref, 1).ptr, _ref, 0).ptr); PL_CHECK;
+  
+  // <lambda>
+  compile_lambda(err, gcm, lambda_exp, code_vector); PL_CHECK;
+  
+  // call 3
+  object_vector_ref_push(err, gcm, code_vector, op_call); PL_CHECK;
+  args_count_obj = gc_manager_object_alloc(err, gcm, TYPE_INT); PL_CHECK;
+  object_int_init(err, args_count_obj, 3); PL_CHECK;
+  object_vector_ref_push(err, gcm, code_vector, args_count_obj); PL_CHECK;
+    
+  PL_FUNC_END
+  gc_manager_stack_object_balance(gcm, gcm_stack_depth);
+  return *err;
+}
+
+object_t *compile_lambda_object(err_t **err, gc_manager_t *gcm, object_t *lambda_exp){
   size_t gcm_stack_depth;
   object_t *exp_code_vector = NULL;
   object_t *exp_code = NULL;
@@ -527,6 +657,7 @@ err_t *compile_verbose_code(err_t **err, gc_manager_t *gcm, object_t *code, size
     item = OBJ_ARR_AT(code,_ref,i).ptr;
 
     print_indentation(indentation);
+    printf("["FMT_TYPE_SIZE_T"] ", i);
     if(item == op_call){
       i++;
       arg1 = OBJ_ARR_AT(code,_ref,i).ptr;

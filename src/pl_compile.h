@@ -7,11 +7,15 @@
 
 int parser_symbol_eq(object_t *symbol, const char *str);
 
-object_t *compile_exp(err_t **err, gc_manager_t *gcm, object_t *exp, object_t *code_vector);
-
 object_t *array_ref_symbol_2_array_symbol(err_t **err, gc_manager_t *gcm, object_t *array_ref_symbol);
 
-object_t *compile_lambda(err_t **err, gc_manager_t *gcm, object_t *lambda_exp);
+object_t *compile_exp(err_t **err, gc_manager_t *gcm, object_t *exp, object_t *code_vector);
+
+err_t *compile_lambda(err_t **err, gc_manager_t *gcm, object_t *exp, object_t *code_vector);
+err_t *compile_define(err_t **err, gc_manager_t *gcm, object_t *key, object_t *value, object_t *code_vector);
+err_t *compile_defun(err_t **err, gc_manager_t *gcm, object_t *exp, object_t *code_vector);
+
+object_t *compile_lambda_object(err_t **err, gc_manager_t *gcm, object_t *lambda_exp);
 
 err_t *compile_quote(err_t **err, gc_manager_t *gcm, object_t *quoted_exp, object_t *code_vector);
 

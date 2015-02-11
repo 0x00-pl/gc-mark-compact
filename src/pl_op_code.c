@@ -24,6 +24,7 @@ err_t *op_init_global(err_t **err){
   g_lambda = make_global_symbol(err, "g_lambda "); PL_CHECK;
   g_mklmd  = make_global_symbol(err, "g_mklmd  "); PL_CHECK;
   g_nil    = make_global_symbol(err, "g_nil    "); PL_CHECK;
+  g_true   = make_global_symbol(err, "g_true   "); PL_CHECK;
   g_define = make_global_symbol(err, "g_define "); PL_CHECK;
   g_if     = make_global_symbol(err, "g_if     "); PL_CHECK;
   g_set    = make_global_symbol(err, "g_set    "); PL_CHECK;
@@ -63,6 +64,8 @@ err_t *op_free_global(err_t **err){
 int object_is_nil(err_t **err, object_t *obj){
   PL_ASSERT_NOT_NULL(obj);
   if(obj == g_nil) {return 1;}
+  if(obj == g_true) {return 0;}
+  if(object_array_count(err,obj)==0) {return 1;}
   switch(obj->type){
     case TYPE_INT:
       return obj->part._int.value == 0;
@@ -137,7 +140,7 @@ object_t *object_tuple_lambda_alloc(err_t **err, struct gc_manager_t_decl *gcm, 
 
   PL_ASSERT(argname->type == TYPE_SYMBOL, err_typecheck);
   PL_ASSERT(exp->type == TYPE_REF, err_typecheck);
-  PL_ASSERT(envname != NULL && envname->type == TYPE_SYMBOL, err_typecheck);
+//   PL_ASSERT(envname != NULL && envname->type == TYPE_SYMBOL, err_typecheck); // un pass with empty symbol array
 
   object_t *new_lambda = object_tuple_alloc(err, gcm, 6); PL_CHECK;
   OBJ_ARR_AT(new_lambda, _ref, 0).ptr = g_lambda;

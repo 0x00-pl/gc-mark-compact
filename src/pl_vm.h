@@ -15,6 +15,7 @@ object_t *object_tuple_vm_get_top_frame(err_t **err, object_t *vm);
 err_t *object_tuple_vm_set_top_frame(err_t **err, object_t *vm, object_t *top_frame);
 
 int vm_step(err_t** err, object_t* vm, gc_manager_t* gcm);
+err_t *vm_eval_text(err_t **err, gc_manager_t *gcm, const char *text);
 
 err_t *vm_add_stdlib(err_t **err, gc_manager_t *gcm, object_t *vm);
 

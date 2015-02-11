@@ -5,7 +5,7 @@
 #include "pl_type.h"
 #include "pl_err.h"
 #include "pl_op_code.h"
-#include "pl_plandform.h"
+#include "pl_plantform.h"
 
 
 err_t *gc_manager_init(err_t **err, gc_manager_t *manager){
@@ -101,7 +101,7 @@ err_t *gc_manager_object_pool_resize(err_t **err, gc_manager_t *manager, size_t 
 
   new_maxsize = manager->object_pool_maxsize;
   while(new_maxsize < new_size){
- // printf("[debug] change "FMT_SIXE_T" / "FMT_SIXE_T" => "FMT_SIXE_T"\n",
+ // printf("[debug] change "FMT_TYPE_SIZE_T" / "FMT_TYPE_SIZE_T" => "FMT_TYPE_SIZE_T"\n",
  //        manager->object_pool_size, manager->object_pool_maxsize, new_size);
     new_maxsize *= 2;
   }
@@ -196,34 +196,6 @@ object_t *gc_manager_object_array_expand(err_t **err, gc_manager_t *gcm, object_
   PL_FUNC_END
   return ret;
 }
-object_t *gc_manager_object_array_slice(err_t **err, gc_manager_t *gcm, object_t *obj, size_t new_count_beg, size_t new_count_end){
-  size_t gcm_stack_depth;
-  object_t *ret = NULL;
-  void *src_mem = NULL;
-  void *dst_mem = NULL;
-  size_t obj_count;
-  size_t new_count = new_count_end - new_count_beg;
-
-  gcm_stack_depth = gc_manager_stack_object_get_depth(gcm);
-  gc_manager_stack_object_push(err, gcm, &obj); PL_CHECK;
-
-  if(new_count == 0){
-    ret = gc_manager_object_array_alloc(err, gcm, TYPE_UNKNOW, 0); PL_CHECK;
-  }else{
-    PL_ASSERT(new_count_beg <= new_count_end, err_out_of_range);
-    obj_count = object_array_count(err, obj); PL_CHECK;
-    PL_ASSERT(new_count_end <= obj_count, err_out_of_range);
-
-    ret = gc_manager_object_array_alloc(err, gcm, obj->type, new_count); PL_CHECK;
-    src_mem = object_array_index(err, obj, new_count_beg); PL_CHECK;
-    dst_mem = object_array_index(err, ret, 0); PL_CHECK;
-    memcpy(dst_mem, src_mem, new_count * object_sizeof_part(err, obj->type)); PL_CHECK;
-  }
-  PL_FUNC_END
-  gc_manager_stack_object_balance(gcm, gcm_stack_depth);
-  return ret;
-}
-
 
 
 err_t *gc_manager_mark(err_t **err, gc_manager_t *manager){
@@ -310,10 +282,10 @@ err_t *gc_gc(err_t **err, gc_manager_t *manager){
 err_t *gc_verbose_object_pool(err_t **err, gc_manager_t *manager, int detal){
   size_t count = 0;
   object_t *iter = NULL;
-  printf("[obj num: "FMT_SIXE_T", mem: "FMT_SIXE_T"] \n", manager->object_count, manager->object_pool_size);
+  printf("[obj num: "FMT_TYPE_SIZE_T", mem: "FMT_TYPE_SIZE_T"] \n", manager->object_count, manager->object_pool_size);
   if(detal){
     for(iter=manager->object_pool; iter<gc_manager_object_pool_end(err, manager); iter=gc_object_next(iter)){
-      printf("["FMT_SIXE_T"]: ", count++);
+      printf("["FMT_TYPE_SIZE_T"]: ", count++);
       object_verbose(err, iter, 1, 0, 0);
     }
   }

@@ -187,8 +187,14 @@ err_t *object_halt_nth(err_t **err, object_t *obj, int n){
   PL_FUNC_END
   return *err;
 }
+
 err_t *object_halt(err_t **err, object_t *obj){
-  return object_halt_nth(err, obj, 0);
+  size_t count = object_array_count(err, obj); PL_CHECK;
+  while(count --> 0){
+    object_halt_nth(err, obj, (int)count);
+  }
+  PL_FUNC_END
+  return *err;
 }
 
 
@@ -198,6 +204,23 @@ err_t *object_type_check(err_t **err, object_t *obj, enum_object_type_t type){
   PL_FUNC_END
   return *err;
 }
+
+object_float_value_t object_get_value(err_t **err, object_t *obj){
+  (void)err;
+  switch(obj->type){
+    case TYPE_INT:
+      return (object_float_value_t)obj->part._int.value;
+      break;
+    case TYPE_FLOAT:
+      return obj->part._float.value;
+      break;
+    default:
+      PL_ASSERT(0, err_typecheck);
+  }
+  PL_FUNC_END
+  return -1;
+}
+
 
 
 // object tuple
@@ -250,6 +273,33 @@ void* object_array_index(err_t **err, object_t *obj, size_t index){
   return (void*)ret_addr;
 }
 
+object_t *object_array_slice(err_t **err, struct gc_manager_t_decl *gcm, object_t *obj, size_t new_count_beg, size_t new_count_end){
+  size_t gcm_stack_depth;
+  object_t *ret = NULL;
+  void *src_mem = NULL;
+  void *dst_mem = NULL;
+  size_t obj_count;
+  size_t new_count = new_count_end - new_count_beg;
+
+  gcm_stack_depth = gc_manager_stack_object_get_depth(gcm);
+  gc_manager_stack_object_push(err, gcm, &obj); PL_CHECK;
+
+  if(new_count == 0){
+    ret = gc_manager_object_array_alloc(err, gcm, obj==NULL ? TYPE_UNKNOW : obj->type, 0); PL_CHECK;
+  }else{
+    PL_ASSERT(new_count_beg <= new_count_end, err_out_of_range);
+    obj_count = object_array_count(err, obj); PL_CHECK;
+    PL_ASSERT(new_count_end <= obj_count, err_out_of_range);
+
+    ret = gc_manager_object_array_alloc(err, gcm, obj->type, new_count); PL_CHECK;
+    src_mem = object_array_index(err, obj, new_count_beg); PL_CHECK;
+    dst_mem = object_array_index(err, ret, 0); PL_CHECK;
+    memcpy(dst_mem, src_mem, new_count * object_sizeof_part(err, obj->type)); PL_CHECK;
+  }
+  PL_FUNC_END
+  gc_manager_stack_object_balance(gcm, gcm_stack_depth);
+  return ret;
+}
 
 // object vecter
 err_t *object_vector_pop(err_t **err, object_t *vec){
@@ -263,7 +313,7 @@ err_t *object_vector_pop(err_t **err, object_t *vec){
 
 object_t *object_vector_to_array(err_t **err, object_t *vec, struct gc_manager_t_decl *gcm){
   object_type_check(err, vec, TYPE_VECTOR); PL_CHECK;
-  return gc_manager_object_array_slice(err, gcm, vec->part._vector.pdata, 0, vec->part._vector.count);
+  return object_array_slice(err, gcm, vec->part._vector.pdata, 0, vec->part._vector.count);
   PL_FUNC_END
   return NULL;
 }
@@ -407,7 +457,7 @@ err_t *object_verbose(err_t **err, object_t *obj, int recursive, size_t indentat
   if(limit!=0 && limit<count) {count=limit;}
 
   print_indentation(indentation);
-  printf("@%p M:"FMT_SIXE_T" size: "FMT_SIXE_T" ", obj, obj->mark, obj->size);
+  printf("@%p M:"FMT_TYPE_SIZE_T" size: "FMT_TYPE_SIZE_T" ", obj, obj->mark, obj->size);
   switch(obj->type){
     case TYPE_RAW:
       printf("type: raw\n");
@@ -457,7 +507,7 @@ err_t *object_verbose(err_t **err, object_t *obj, int recursive, size_t indentat
       if(recursive>0){
         for(i=0; i<count; i++){
           print_indentation(indentation+1);
-          printf("{count:"FMT_SIXE_T"} \n", OBJ_ARR_AT(obj, _vector, i).count);
+          printf("{count:"FMT_TYPE_SIZE_T"} \n", OBJ_ARR_AT(obj, _vector, i).count);
           if(OBJ_ARR_AT(obj, _vector, i).count > 0){
             object_verbose(err, OBJ_ARR_AT(obj, _vector, i).pdata, recursive-1, indentation+2, OBJ_ARR_AT(obj, _vector, i).count); PL_CHECK;
           }
@@ -465,7 +515,7 @@ err_t *object_verbose(err_t **err, object_t *obj, int recursive, size_t indentat
       }else{
         for(i=0; i<count; i++){
           print_indentation(indentation+1);
-          printf("{count:"FMT_SIXE_T" \n", OBJ_ARR_AT(obj, _vector, i).count);
+          printf("{count:"FMT_TYPE_SIZE_T" \n", OBJ_ARR_AT(obj, _vector, i).count);
         }
       }
       break;
