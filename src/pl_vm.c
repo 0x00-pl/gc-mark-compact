@@ -239,7 +239,7 @@ err_t *vm_eval_text(err_t **err, gc_manager_t *gcm, const char *text){
   vm_add_stdlib(err, gcm, vm); PL_CHECK;
   
 //   vm_verbose_env(err, gcm, vm); PL_CHECK;
-  compile_verbose_code(err, gcm, parsed_exp_code, 2);
+//   compile_verbose_code(err, gcm, parsed_exp_code, 2);
     
   do{
 //        vm_verbose_cur_code(err, gcm, vm); PL_CHECK; // debug

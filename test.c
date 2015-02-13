@@ -230,11 +230,11 @@ int main(int argc, char **argv){
 //   test_vm_1(err, gcm, "((define add (lambda (a b) (+ a b))))");  
 //   test_vm_1(err, gcm, "((define (add a b) (+ a b)))");  
 //   test_vm_1(err, gcm, "((define (add a b) (+ a b)) (display (add 40 2)))");  
-//   test_file_1(err, gcm, "test/test.lisp");
-//   test_file_1(err, gcm, "test/test1.lisp");
-//   test_file_1(err, gcm, "test/test2.lisp");
-//   test_file_1(err, gcm, "test/test3.lisp");
-//   test_file_1(err, gcm, "test/test4.lisp");
+  test_file_1(err, gcm, "test/test.lisp");
+  test_file_1(err, gcm, "test/test1.lisp");
+  test_file_1(err, gcm, "test/test2.lisp");
+  test_file_1(err, gcm, "test/test3.lisp");
+  test_file_1(err, gcm, "test/test4.lisp");
   test_file_1(err, gcm, "test/test5.lisp");
   
   gc_manager_halt(err, gcm); PL_CHECK;
