@@ -11,7 +11,7 @@ int parser_symbol_eq(object_t *symbol, const char *str){
   if(symbol_name->type != TYPE_STR) { return 0; }
   symbol_name = symbol->part._symbol.name;
 
-  return strncmp(str, symbol_name->part._str.str, symbol_name->part._str.size) == 0;
+  return strcmp(str, symbol_name->part._str.str) == 0;
 }
 
 object_t *array_ref_symbol_2_array_symbol(err_t **err, gc_manager_t *gcm, object_t *array_ref_symbol){
@@ -111,9 +111,10 @@ object_t *compile_exp(err_t **err, gc_manager_t *gcm, object_t *exp, object_t *c
         object_vector_ref_push(err, gcm, code_vector, OBJ_ARR_AT(exp,_ref,1).ptr); PL_CHECK;
       }
     }
-    else if(parser_symbol_eq(func_keyword, "define")){
+    else if(parser_symbol_eq(func_keyword, "define") || parser_symbol_eq(func_keyword, "set!")){
       if(args_count != 3){
         // bad syntax
+        PL_ASSERT(0, err_out_of_range);
         goto fin;
       }
 
@@ -122,23 +123,6 @@ object_t *compile_exp(err_t **err, gc_manager_t *gcm, object_t *exp, object_t *c
       }else{
 	compile_define(err, gcm, OBJ_ARR_AT(exp,_ref,1).ptr, OBJ_ARR_AT(exp,_ref,2).ptr, code_vector); PL_CHECK;
       }
-      //TODO remove old code
-//       // push sym(define)
-//       object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
-//       object_vector_ref_push(err, gcm, code_vector, g_define); PL_CHECK;
-// 
-//       // push exp[1]
-//       object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
-//       object_vector_ref_push(err, gcm, code_vector, OBJ_ARR_AT(exp,_ref,1).ptr); PL_CHECK;
-// 
-//       // <exp[2]>
-//       compile_exp(err, gcm, OBJ_ARR_AT(exp,_ref,2).ptr, code_vector); PL_CHECK;
-// 
-//       // call 3
-//       object_vector_ref_push(err, gcm, code_vector, op_call); PL_CHECK;
-//       args_count_obj = gc_manager_object_alloc(err, gcm, TYPE_INT); PL_CHECK;
-//       object_int_init(err, args_count_obj, 3); PL_CHECK;
-//       object_vector_ref_push(err, gcm, code_vector, args_count_obj); PL_CHECK;
     }
     else if(parser_symbol_eq(func_keyword, "if")){
       if(args_count == 3){
@@ -230,28 +214,28 @@ object_t *compile_exp(err_t **err, gc_manager_t *gcm, object_t *exp, object_t *c
       // end:
       object_int_init(err, pc_end, (object_int_value_t)code_vector->part._vector.count); PL_CHECK;
     }
-    else if(parser_symbol_eq(func_keyword, "set!")){
-      if(args_count != 3){
-        // bad syntax
-        goto fin;
-      }
-
-      // push sym(set)
-      object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
-      object_vector_ref_push(err, gcm, code_vector, g_set); PL_CHECK;
-
-      // push sym = exp[1]
-      object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
-      object_vector_ref_push(err, gcm, code_vector, OBJ_ARR_AT(exp,_ref,1).ptr); PL_CHECK;
-
-      // <exp[2]>
-      compile_exp(err, gcm, OBJ_ARR_AT(exp,_ref,2).ptr, code_vector); PL_CHECK;
-
-      // call 3
-      object_vector_ref_push(err, gcm, code_vector, op_call); PL_CHECK;
-      object_int_init(err, args_count_obj, 3); PL_CHECK;
-      object_vector_ref_push(err, gcm, code_vector, args_count_obj); PL_CHECK;
-    }
+//     else if(parser_symbol_eq(func_keyword, "set!")){
+//       if(args_count != 3){
+//         // bad syntax
+//         goto fin;
+//       }
+// 
+//       // push sym(set)
+//       object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
+//       object_vector_ref_push(err, gcm, code_vector, g_set); PL_CHECK;
+// 
+//       // push sym = exp[1]
+//       object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
+//       object_vector_ref_push(err, gcm, code_vector, OBJ_ARR_AT(exp,_ref,1).ptr); PL_CHECK;
+// 
+//       // <exp[2]>
+//       compile_exp(err, gcm, OBJ_ARR_AT(exp,_ref,2).ptr, code_vector); PL_CHECK;
+// 
+//       // call 3
+//       object_vector_ref_push(err, gcm, code_vector, op_call); PL_CHECK;
+//       object_int_init(err, args_count_obj, 3); PL_CHECK;
+//       object_vector_ref_push(err, gcm, code_vector, args_count_obj); PL_CHECK;
+//     }
     else if(parser_symbol_eq(func_keyword, "quote")){
       if(args_count != 2){
         // bad syntax

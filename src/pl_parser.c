@@ -575,6 +575,14 @@ err_t *parser_verbose(err_t **err, object_t *exp){
   if(count == 0) {printf("()"); goto fin;}
   switch(exp->type){
     case TYPE_REF:
+      if(count>0 && OBJ_ARR_AT(exp, _ref, 0).ptr==g_lambda){
+	printf("(lambda (");
+	parser_verbose(err, object_tuple_lambda_get_argname(err, exp)); PL_CHECK;
+	printf(") ");
+	parser_verbose(err, object_tuple_lambda_get_exp(err, exp)); PL_CHECK;
+	printf(" )");
+	break;
+      }
       printf("(");
       for(i=0; i<count; i++){
         parser_verbose(err, OBJ_ARR_AT(exp, _ref, i).ptr); PL_CHECK;

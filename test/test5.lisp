@@ -1,15 +1,15 @@
-(define kinds-of-coins 15)
-(if (= kinds-of-coins 1)
-    1
-    (if (= kinds-of-coins 2) 
-        5
-        (if (= kinds-of-coins 3) 
-            10
-            (if (= kinds-of-coins 4) 
-                25
-                (if (= kinds-of-coins 5) 
-                    50
-                    (begin (display (+ 1 2)) 'else-string))))))
+;(define kinds-of-coins 15)
+;(if (= kinds-of-coins 1)
+;    1
+;    (if (= kinds-of-coins 2) 
+;        5
+;        (if (= kinds-of-coins 3) 
+;            10
+;            (if (= kinds-of-coins 4) 
+;                25
+;                (if (= kinds-of-coins 5) 
+;                    50
+;                    (begin (display (+ 1 2)) 'else-string))))))
 
 (define (se a)
   (begin (display "eeee=") (display a) (cond ((= a 1) 1)

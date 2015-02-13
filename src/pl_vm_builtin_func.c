@@ -84,6 +84,7 @@ err_t *vm_step_op_call_lambda(err_t **err, gc_manager_t *gcm, object_t *vm, obje
 
 
   gcm_stack_depth = gc_manager_stack_object_get_depth(gcm);
+  gc_manager_stack_object_push(err, gcm, &vm); PL_CHECK;
   gc_manager_stack_object_push(err, gcm, &func); PL_CHECK;
   gc_manager_stack_object_push(err, gcm, &stack); PL_CHECK;
   gc_manager_stack_object_push(err, gcm, &args_name); PL_CHECK;
@@ -152,6 +153,8 @@ err_t *vm_step_op_call_define(err_t **err, gc_manager_t *gcm, object_t *vm, obje
   }else{
     object_tuple_cons_set_cdr(err, key_value_pair, value); PL_CHECK;
   }
+  
+  object_vector_ref_push(err, gcm, stack, value); PL_CHECK;
 
   PL_FUNC_END;
   gc_manager_stack_object_balance(gcm, gcm_stack_depth);
@@ -232,6 +235,165 @@ err_t *vm_step_op_call_display(err_t **err, gc_manager_t *gcm, object_t *vm, obj
   object_disply(err, value); PL_CHECK;
 
   object_vector_ref_push(err, gcm, stack, g_nil); PL_CHECK;
+  PL_FUNC_END;
+  gc_manager_stack_object_balance(gcm, gcm_stack_depth);
+  return *err;
+}
+
+err_t *vm_step_op_call_slice(err_t **err, gc_manager_t *gcm, object_t *vm, object_t* top_frame, object_t *func, object_t *stack, size_t args_count){
+  size_t gcm_stack_depth;
+  size_t i;
+  object_t *ret = NULL;
+  object_t *src_array = NULL;
+  object_t *lower_bound = NULL;
+  object_t *upper_bound = NULL;
+  object_int_value_t lower_bound_int;
+  object_int_value_t upper_bound_int;
+
+  gcm_stack_depth = gc_manager_stack_object_get_depth(gcm);
+  gc_manager_stack_object_push(err, gcm, &vm); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &func); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &stack); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &top_frame); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &ret); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &src_array); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &lower_bound); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &upper_bound); PL_CHECK;
+
+  PL_ASSERT(args_count==4, err_out_of_range);
+  
+  src_array = object_vector_ref_index(err, stack, -1); PL_CHECK;
+  if(object_array_count(err, src_array)==0){
+    ret = g_nil;
+  }else{
+    lower_bound = object_vector_ref_index(err, stack, -3); PL_CHECK;
+    upper_bound = object_vector_ref_index(err, stack, -2); PL_CHECK;
+    lower_bound_int = object_get_int_value(err, lower_bound); PL_CHECK;
+    upper_bound_int = object_get_int_value(err, upper_bound); PL_CHECK;
+    
+    ret = object_array_slice(err, gcm, src_array, (size_t)lower_bound_int, (size_t)upper_bound_int); PL_CHECK;
+  }
+  
+  for(i=0; i<args_count; i++){
+    object_vector_pop(err, stack); PL_CHECK;
+  }
+
+  object_vector_ref_push(err, gcm, stack, ret); PL_CHECK;
+
+  PL_FUNC_END;
+  gc_manager_stack_object_balance(gcm, gcm_stack_depth);
+  return *err;
+}
+err_t *vm_step_op_call_car(err_t **err, gc_manager_t *gcm, object_t *vm, object_t* top_frame, object_t *func, object_t *stack, size_t args_count){
+  size_t gcm_stack_depth;
+  size_t i;
+  object_t *ret = NULL;
+  object_t *src_array = NULL;
+  size_t array_size;
+
+  gcm_stack_depth = gc_manager_stack_object_get_depth(gcm);
+  gc_manager_stack_object_push(err, gcm, &vm); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &func); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &stack); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &top_frame); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &ret); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &src_array); PL_CHECK;
+
+  PL_ASSERT(args_count==2, err_out_of_range);
+  
+  src_array = object_vector_ref_index(err, stack, -1); PL_CHECK;
+  array_size = object_array_count(err, src_array); PL_CHECK;
+  PL_ASSERT(array_size==0 || src_array->type==TYPE_REF, err_typecheck);
+  
+  if(array_size == 0){
+    ret = g_nil;
+  }else{    
+    ret = OBJ_ARR_AT(src_array, _ref, 0).ptr;
+  }
+  
+  for(i=0; i<args_count; i++){
+    object_vector_pop(err, stack); PL_CHECK;
+  }
+
+  object_vector_ref_push(err, gcm, stack, ret); PL_CHECK;
+
+  PL_FUNC_END;
+  gc_manager_stack_object_balance(gcm, gcm_stack_depth);
+  return *err;
+}
+err_t *vm_step_op_call_cdr(err_t **err, gc_manager_t *gcm, object_t *vm, object_t* top_frame, object_t *func, object_t *stack, size_t args_count){
+  size_t gcm_stack_depth;
+  size_t i;
+  object_t *ret = NULL;
+  object_t *src_array = NULL;
+  size_t array_size;
+
+  gcm_stack_depth = gc_manager_stack_object_get_depth(gcm);
+  gc_manager_stack_object_push(err, gcm, &vm); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &func); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &stack); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &top_frame); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &ret); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &src_array); PL_CHECK;
+
+  PL_ASSERT(args_count==2, err_out_of_range);
+  
+  src_array = object_vector_ref_index(err, stack, -1); PL_CHECK;
+  array_size = object_array_count(err, src_array); PL_CHECK;
+  PL_ASSERT(array_size==0 || src_array->type==TYPE_REF, err_typecheck);
+  
+  if(array_size == 0){
+    ret = g_nil;
+  }else{    
+    ret = object_array_slice(err, gcm, src_array, 1, array_size); PL_CHECK;
+  }
+  
+  for(i=0; i<args_count; i++){
+    object_vector_pop(err, stack); PL_CHECK;
+  }
+
+  object_vector_ref_push(err, gcm, stack, ret); PL_CHECK;
+
+  PL_FUNC_END;
+  gc_manager_stack_object_balance(gcm, gcm_stack_depth);
+  return *err;
+}
+err_t *vm_step_op_call_cons(err_t **err, gc_manager_t *gcm, object_t *vm, object_t* top_frame, object_t *func, object_t *stack, size_t args_count){
+  size_t gcm_stack_depth;
+  size_t i;
+  object_t *ret = NULL;
+  object_t *ar_object = NULL;
+  object_t *dr_object = NULL;
+  size_t array_size;
+
+  gcm_stack_depth = gc_manager_stack_object_get_depth(gcm);
+  gc_manager_stack_object_push(err, gcm, &vm); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &func); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &stack); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &top_frame); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &ret); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &ar_object); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &dr_object); PL_CHECK;
+
+  PL_ASSERT(args_count==3, err_out_of_range);
+  
+  ar_object = object_vector_ref_index(err, stack, -2); PL_CHECK;
+  dr_object = object_vector_ref_index(err, stack, -1); PL_CHECK;
+  array_size = 1 + object_array_count(err, dr_object); PL_CHECK;
+  
+  // ret = (ar . dr)
+  ret = gc_manager_object_array_alloc(err, gcm, TYPE_REF, array_size); PL_CHECK;
+  object_ref_init_nth(err, ret, 0, ar_object); PL_CHECK;
+  for(i=1; i<array_size; i++){
+      object_ref_init_nth(err, ret, (int)i, OBJ_ARR_AT(dr_object, _ref, i-1).ptr); PL_CHECK;
+  }
+  
+  for(i=0; i<args_count; i++){
+    object_vector_pop(err, stack); PL_CHECK;
+  }
+
+  object_vector_ref_push(err, gcm, stack, ret); PL_CHECK;
+
   PL_FUNC_END;
   gc_manager_stack_object_balance(gcm, gcm_stack_depth);
   return *err;
@@ -536,6 +698,7 @@ static err_t *vm_step_op_call_cmp_all(err_t **err, gc_manager_t *gcm, object_t *
       is_fail = 1;
       break;
     }
+    prev_value = value;
   }
   
   for(i=0; i<args_count; i++){
@@ -553,8 +716,8 @@ static err_t *vm_step_op_call_cmp_all(err_t **err, gc_manager_t *gcm, object_t *
 
 static int cmp_func_l(err_t **err, object_t* a, object_t* b){
   object_float_value_t va,vb;
-  va = object_get_value(err, a);
-  vb = object_get_value(err, b);
+  va = object_get_float_value(err, a);
+  vb = object_get_float_value(err, b);
   return va < vb;
 }
 err_t *vm_step_op_call_l(err_t **err, gc_manager_t *gcm, object_t *vm, object_t* top_frame, object_t *func, object_t *stack, size_t args_count){
@@ -562,8 +725,8 @@ err_t *vm_step_op_call_l(err_t **err, gc_manager_t *gcm, object_t *vm, object_t*
 }
 static int cmp_func_r(err_t **err, object_t* a, object_t* b){
   object_float_value_t va,vb;
-  va = object_get_value(err, a);
-  vb = object_get_value(err, b);
+  va = object_get_float_value(err, a);
+  vb = object_get_float_value(err, b);
   return va > vb;
 }
 err_t *vm_step_op_call_r(err_t **err, gc_manager_t *gcm, object_t *vm, object_t* top_frame, object_t *func, object_t *stack, size_t args_count){
@@ -571,8 +734,8 @@ err_t *vm_step_op_call_r(err_t **err, gc_manager_t *gcm, object_t *vm, object_t*
 }
 static int cmp_func_le(err_t **err, object_t* a, object_t* b){
   object_float_value_t va,vb;
-  va = object_get_value(err, a);
-  vb = object_get_value(err, b);
+  va = object_get_float_value(err, a);
+  vb = object_get_float_value(err, b);
   return va <= vb;
 }
 err_t *vm_step_op_call_le(err_t **err, gc_manager_t *gcm, object_t *vm, object_t* top_frame, object_t *func, object_t *stack, size_t args_count){
@@ -580,8 +743,8 @@ err_t *vm_step_op_call_le(err_t **err, gc_manager_t *gcm, object_t *vm, object_t
 }
 static int cmp_func_re(err_t **err, object_t* a, object_t* b){
   object_float_value_t va,vb;
-  va = object_get_value(err, a);
-  vb = object_get_value(err, b);
+  va = object_get_float_value(err, a);
+  vb = object_get_float_value(err, b);
   return va >= vb;
 }
 err_t *vm_step_op_call_re(err_t **err, gc_manager_t *gcm, object_t *vm, object_t* top_frame, object_t *func, object_t *stack, size_t args_count){

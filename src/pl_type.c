@@ -205,7 +205,7 @@ err_t *object_type_check(err_t **err, object_t *obj, enum_object_type_t type){
   return *err;
 }
 
-object_float_value_t object_get_value(err_t **err, object_t *obj){
+object_float_value_t object_get_float_value(err_t **err, object_t *obj){
   (void)err;
   switch(obj->type){
     case TYPE_INT:
@@ -213,6 +213,21 @@ object_float_value_t object_get_value(err_t **err, object_t *obj){
       break;
     case TYPE_FLOAT:
       return obj->part._float.value;
+      break;
+    default:
+      PL_ASSERT(0, err_typecheck);
+  }
+  PL_FUNC_END
+  return -1;
+}
+object_int_value_t object_get_int_value(err_t **err, object_t *obj){
+  (void)err;
+  switch(obj->type){
+    case TYPE_INT:
+      return obj->part._int.value;
+      break;
+    case TYPE_FLOAT:
+      return (object_int_value_t)obj->part._float.value;
       break;
     default:
       PL_ASSERT(0, err_typecheck);
@@ -307,6 +322,9 @@ err_t *object_vector_pop(err_t **err, object_t *vec){
   if(vec->part._vector.count == 0) {return *err;}
   vec->part._vector.count--;
   object_halt_nth(err, vec->part._vector.pdata, (int)vec->part._vector.count);
+  if(vec->part._vector.count == 0){
+    vec->part._vector.pdata = NULL;
+  }
   PL_FUNC_END
   return *err;
 }
@@ -546,6 +564,11 @@ err_t *object_disply(err_t **err, object_t *value){
   size_t count;
   size_t i;
   
+  if(value == NULL){
+    printf("NULL");
+    goto fin;
+  }
+  
   switch(value->type){
     case TYPE_INT:
       printf(FMT_TYPE_INT, value->part._int.value);
@@ -644,7 +667,7 @@ err_t *object_ptr_gc_relink(err_t **err, object_t **pobj, char *dest_pool, size_
   PL_ASSERT(dest_pool <= (char*)(*pobj)->move_dest, err_out_of_range);
   PL_ASSERT((char*)(*pobj)->move_dest < dest_pool+dest_pool_maxsize, err_out_of_range);
 
-  *pobj = (*pobj)->move_dest;  // TODO unsure *pobg run this only once
+  *pobj = (*pobj)->move_dest;  // TODO unsure *pobj run this only once
   PL_FUNC_END
   return *err;
 }
@@ -668,7 +691,9 @@ err_t *object_gc_relink(err_t **err, object_t *obj, char *dest_pool, size_t dest
     break;
   case TYPE_VECTOR:
     while(count-->0){
-      object_ptr_gc_relink(err, &(OBJ_ARR_AT(obj, _vector, count).pdata), dest_pool, dest_pool_maxsize); PL_CHECK;
+      if(OBJ_ARR_AT(obj, _vector, count).count != 0){
+	object_ptr_gc_relink(err, &(OBJ_ARR_AT(obj, _vector, count).pdata), dest_pool, dest_pool_maxsize); PL_CHECK;
+      }
     }
     break;
   case TYPE_RAW:

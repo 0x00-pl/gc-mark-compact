@@ -107,7 +107,8 @@ err_t *object_halt(err_t **err, object_t *obj);
 
 // object cast
 err_t *object_type_check(err_t **err, object_t *obj, enum_object_type_t type);
-object_float_value_t object_get_value(err_t **err, object_t *obj);
+object_float_value_t object_get_float_value(err_t **err, object_t *obj);
+object_int_value_t object_get_int_value(err_t **err, object_t *obj);
 
 // object tuple
 struct gc_manager_t_decl;

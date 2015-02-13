@@ -51,6 +51,8 @@ err_t *object_tuple_vm_set_top_frame(err_t **err, object_t *vm, object_t *top_fr
 int vm_step(err_t **err, object_t *vm, gc_manager_t *gcm){
   size_t gcm_stack_depth;
   int halt = 0;
+  object_int_value_t call_arg_count;
+//   size_t i;
   object_t *arg1 = NULL;
   object_t *cons_ar = NULL;
   object_t *cons_dr = NULL;
@@ -115,25 +117,35 @@ int vm_step(err_t **err, object_t *vm, gc_manager_t *gcm){
 
 
     object_type_check(err, stack->part._vector.pdata, TYPE_REF); PL_CHECK;
-    func = object_vector_ref_index(err, stack, -(int)arg1->part._int.value); PL_CHECK;
+    call_arg_count = arg1->part._int.value;
+    
+    // debug    
+//     printf("call:(");
+//     for(i=0; i<(size_t)call_arg_count; i++){
+//       if(i!=0){printf(" ");}
+//       parser_verbose(err, object_vector_ref_index(err, stack, (int)i-(int)call_arg_count));
+//     }
+//     printf(")\n");
+    
+    func = object_vector_ref_index(err, stack, -(int)call_arg_count); PL_CHECK;
 
     // built-in function
     if(func->type == TYPE_SYMBOL){
-      vm_step_op_call_resolve(err, gcm, vm, top_frame, func, stack, (size_t)arg1->part._int.value); PL_CHECK;
+      vm_step_op_call_resolve(err, gcm, vm, top_frame, func, stack, (size_t)call_arg_count); PL_CHECK;
     }
     else if(func == g_define || func == g_set){
-      vm_step_op_call_define(err, gcm, vm, top_frame, func, stack, (size_t)arg1->part._int.value); PL_CHECK;
+      vm_step_op_call_define(err, gcm, vm, top_frame, func, stack, (size_t)call_arg_count); PL_CHECK;
     }
     else if(func == g_mklmd){
-      vm_step_op_call_make_lambda(err, gcm, vm, top_frame, func, stack, (size_t)arg1->part._int.value); PL_CHECK;
+      vm_step_op_call_make_lambda(err, gcm, vm, top_frame, func, stack, (size_t)call_arg_count); PL_CHECK;
     }
     else if(func->type == TYPE_RAW){
       // c function
       PL_ASSERT(func->part._raw.ptr!=NULL, err_null);
-      ((vm_step_op_call_c_function_t)func->part._raw.ptr)(err, gcm, vm, top_frame, func, stack, (size_t)arg1->part._int.value); PL_CHECK;
+      ((vm_step_op_call_c_function_t)func->part._raw.ptr)(err, gcm, vm, top_frame, func, stack, (size_t)call_arg_count); PL_CHECK;
     }
     else if(object_tuple_is_lambda(err, func)){
-      vm_step_op_call_lambda(err, gcm, vm, top_frame, func, stack, (size_t)arg1->part._int.value);
+      vm_step_op_call_lambda(err, gcm, vm, top_frame, func, stack, (size_t)call_arg_count);
     }
     else{
       // function is unknow
@@ -174,6 +186,11 @@ err_t *vm_add_stdlib(err_t **err, gc_manager_t *gcm, object_t *vm){
 
   top_frame = object_tuple_vm_get_top_frame(err, vm); PL_CHECK;
 
+  add_builtin_func(err, gcm, top_frame, "slice", &vm_step_op_call_slice);
+  add_builtin_func(err, gcm, top_frame, "car", &vm_step_op_call_car);
+  add_builtin_func(err, gcm, top_frame, "cdr", &vm_step_op_call_cdr);
+  add_builtin_func(err, gcm, top_frame, "cons", &vm_step_op_call_cons);
+  
   add_builtin_func(err, gcm, top_frame, "and", &vm_step_op_call_and);
   add_builtin_func(err, gcm, top_frame, "or", &vm_step_op_call_or);
   add_builtin_func(err, gcm, top_frame, "+", &vm_step_op_call_add);
@@ -222,7 +239,7 @@ err_t *vm_eval_text(err_t **err, gc_manager_t *gcm, const char *text){
   vm_add_stdlib(err, gcm, vm); PL_CHECK;
   
 //   vm_verbose_env(err, gcm, vm); PL_CHECK;
-//   compile_verbose_code(err, gcm, parsed_exp_code, 2);
+  compile_verbose_code(err, gcm, parsed_exp_code, 2);
     
   do{
 //        vm_verbose_cur_code(err, gcm, vm); PL_CHECK; // debug
@@ -259,8 +276,12 @@ err_t *vm_verbose_cur_code(err_t **err, gc_manager_t *gcm, object_t *vm){
 
   printf("\n === code ===\n");
   printf("[%ld]:", pc->part._int.value);
-  object_verbose(err, cur_code, 3, 0, 0);
-  object_verbose(err, arg1, 3, 4, 0);
+  
+  parser_verbose(err, cur_code); PL_CHECK;
+  parser_verbose(err, arg1); PL_CHECK;
+  printf("\n");
+//   object_verbose(err, cur_code, 3, 0, 0);
+//   object_verbose(err, arg1, 3, 4, 0);
 
   PL_FUNC_END;
   gc_manager_stack_object_balance(gcm, gcm_stack_depth);
@@ -280,7 +301,8 @@ err_t *vm_verbose_stack(err_t **err, gc_manager_t *gcm, object_t *vm){
   stack = object_tuple_frame_get_stack(err, top_frame); PL_CHECK;
 
   printf(" === stack ===\n");
-  object_verbose(err, stack, 3, 0, 0); PL_CHECK;
+  parser_verbose(err, stack); PL_CHECK;
+//   object_verbose(err, stack, 3, 0, 0); PL_CHECK;
 
   PL_FUNC_END;
   gc_manager_stack_object_balance(gcm, gcm_stack_depth);
