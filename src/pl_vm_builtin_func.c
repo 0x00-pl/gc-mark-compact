@@ -81,6 +81,7 @@ err_t *vm_step_op_call_lambda(err_t **err, gc_manager_t *gcm, object_t *vm, obje
   object_t *env_item = NULL;
   object_t *env_item_symbol = NULL;
   object_t *env_item_value = NULL;
+  object_t *next_op_code = NULL;
 
 
   gcm_stack_depth = gc_manager_stack_object_get_depth(gcm);
@@ -94,6 +95,7 @@ err_t *vm_step_op_call_lambda(err_t **err, gc_manager_t *gcm, object_t *vm, obje
   gc_manager_stack_object_push(err, gcm, &env_item); PL_CHECK;
   gc_manager_stack_object_push(err, gcm, &env_item_symbol); PL_CHECK;
   gc_manager_stack_object_push(err, gcm, &env_item_value); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &next_op_code); PL_CHECK;
 
   args_name = object_tuple_lambda_get_argname(err, func); PL_CHECK;
 
@@ -116,8 +118,14 @@ err_t *vm_step_op_call_lambda(err_t **err, gc_manager_t *gcm, object_t *vm, obje
   }
 
   // alloc new frame
+  // test is or not tail_call
+  next_op_code = object_tuple_frame_get_current_code(err, top_frame); PL_CHECK;
+  if(next_op_code == op_ret){
+    // new_frame will return to prev_frame not cur_frame 
+    top_frame = object_tuple_frame_get_prev_frame(err, top_frame); PL_CHECK;
+  }
   new_frame = object_tuple_frame_alloc(err, gcm, func, env, top_frame); PL_CHECK;
-
+  
   object_tuple_vm_set_top_frame(err, vm, new_frame); PL_CHECK;
 
   PL_FUNC_END
