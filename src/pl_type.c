@@ -574,7 +574,7 @@ err_t *object_disply(err_t **err, object_t *value){
       printf(FMT_TYPE_INT, value->part._int.value);
       break;
     case TYPE_FLOAT:
-      printf(FMT_TYPE_FLOAT, value->part._float.value);
+      printf(FMT_TYPE_FLOAT"f", value->part._float.value);
       break;
     case TYPE_STR:
       printf("\"%s\"", value->part._str.str);
