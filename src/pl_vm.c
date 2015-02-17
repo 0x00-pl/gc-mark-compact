@@ -52,7 +52,7 @@ int vm_step(err_t **err, object_t *vm, gc_manager_t *gcm){
   size_t gcm_stack_depth;
   int halt = 0;
   object_int_value_t call_arg_count;
-//   size_t i;
+  size_t i;
   object_t *arg1 = NULL;
   object_t *cons_ar = NULL;
   object_t *cons_dr = NULL;
@@ -119,11 +119,14 @@ int vm_step(err_t **err, object_t *vm, gc_manager_t *gcm){
     object_type_check(err, stack->part._vector.pdata, TYPE_REF); PL_CHECK;
     call_arg_count = arg1->part._int.value;
     
-    // debug    
+    // debug 
+    (void)i;
 //     printf("call:(");
 //     for(i=0; i<(size_t)call_arg_count; i++){
 //       if(i!=0){printf(" ");}
-//       parser_verbose(err, object_vector_ref_index(err, stack, (int)i-(int)call_arg_count));
+// //       parser_verbose(err, );
+// 	object_disply(err, object_vector_ref_index(err, stack, (int)i-(int)call_arg_count));
+//       
 //     }
 //     printf(")\n");
     
@@ -165,6 +168,11 @@ int vm_step(err_t **err, object_t *vm, gc_manager_t *gcm){
     object_vector_push(err, gcm, prev_stack, stack_top); PL_CHECK;
 
     object_tuple_vm_set_top_frame(err, vm, prev_frame); PL_CHECK;
+    
+    // debug
+//     printf("ret:");
+//     parser_verbose(err, stack_top);
+//     printf("\n");
   }else{
     PL_ASSERT_EX(0, err_typecheck(PL_ERR_DEFAULT_MSG_ARGS("unknow op code")), goto fin);
   }
@@ -196,6 +204,8 @@ err_t *vm_add_stdlib(err_t **err, gc_manager_t *gcm, object_t *vm){
   add_builtin_func(err, gcm, top_frame, "+", &vm_step_op_call_add);
   add_builtin_func(err, gcm, top_frame, "-", &vm_step_op_call_sub);
   add_builtin_func(err, gcm, top_frame, "*", &vm_step_op_call_mul);
+  add_builtin_func(err, gcm, top_frame, "/", &vm_step_op_call_div);
+  add_builtin_func(err, gcm, top_frame, "remainder", &vm_step_op_call_remainder);
   
   add_builtin_func(err, gcm, top_frame, "=", &vm_step_op_call_eq);
   add_builtin_func(err, gcm, top_frame, "<", &vm_step_op_call_l);
