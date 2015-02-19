@@ -263,9 +263,9 @@ err_t *vm_eval_text(err_t **err, gc_manager_t *gcm, const char *text){
 //   compile_verbose_code(err, gcm, parsed_exp_code, 2);
     
   do{
-//        vm_verbose_cur_code(err, gcm, vm); PL_CHECK; // debug
+//       vm_verbose_cur_code(err, gcm, vm); PL_CHECK; // debug
     done = vm_step(err, vm, gcm); PL_CHECK;
-//        vm_verbose_stack(err, gcm, vm); PL_CHECK; // debug
+//       vm_verbose_stack(err, gcm, vm); PL_CHECK; // debug
   }while(!done);
   
   printf("\n === vm end === \n");

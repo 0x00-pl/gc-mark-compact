@@ -155,7 +155,7 @@ object_t *compile_exp(err_t **err, gc_manager_t *gcm, object_t *exp, object_t *c
         compile_exp(err, gcm, OBJ_ARR_AT(exp,_ref,2).ptr, code_vector); PL_CHECK;
 	
 	// jmp :begloop
-        object_vector_ref_push(err, gcm, code_vector, op_jn); PL_CHECK;
+        object_vector_ref_push(err, gcm, code_vector, op_jmp); PL_CHECK;
 	
 	alloc_temp = gc_manager_object_alloc(err, gcm, TYPE_INT);
 	object_int_init(err, alloc_temp, (object_int_value_t)while_begloop_index); PL_CHECK;
