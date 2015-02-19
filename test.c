@@ -1,12 +1,11 @@
-
-#include <stdlib.h>
-#include "src/pl_gc.h"
+#include "test.h"
 #include "src/pl_parser.h"
 #include "src/pl_compile.h"
 #include "src/pl_vm.h"
 #include "src/pl_eval_file.h"
 
 
+#include <stdlib.h>
 
 err_t *test_gc_1(err_t **err, gc_manager_t *gcm){
   size_t gc_stack_size;
@@ -190,16 +189,7 @@ err_t *test_file_1(err_t **err, gc_manager_t *gcm, const char *filename){
   return eval_file(err, gcm, filename);
 }
 
-int main(int argc, char **argv){
-  (void)argc;(void)argv;
-  gc_manager_t *gcm = NULL;
-  err_t *rerr = NULL;
-  err_t **err = &rerr;
-  
-  // init global value
-  op_init_global(err); PL_CHECK;
-  gcm = malloc(sizeof(gc_manager_t));
-  gc_manager_init(err, gcm); PL_CHECK;
+err_t *test_main(err_t **err, gc_manager_t *gcm){
   
 //   test_gc_1(err, gcm); PL_CHECK;
 //   test_parsere_1(err, gcm); PL_CHECK;
@@ -208,41 +198,38 @@ int main(int argc, char **argv){
 //   printf("\n");
 //   test_compile_1(err, gcm, "((define inc (lambda (x) (+ x 1))))"); PL_CHECK;
 //   
-//   test_vm_1(err, gcm, "((+ 1 1))");  
-//   test_vm_1(err, gcm, "((display \"hello world!\"))");  
-//   test_vm_1(err, gcm, "((display (- 1 1)))");
-//   test_vm_1(err, gcm, "((display (- 1)))");  
-//   test_vm_1(err, gcm, "((display 1))");  
-//   test_vm_1(err, gcm, "((display (+ 1 1)))");  
-//   test_vm_1(err, gcm, "((display '1))");
-//   test_vm_1(err, gcm, "((display 'x))");
-//   test_vm_1(err, gcm, "((display '(- 1 '1)))");
-//   test_vm_1(err, gcm, "((define a +) (display (a 1 1)))");  
-//   test_vm_1(err, gcm, "((define b (+ 1 1)) (display b))");  
-//   test_vm_1(err, gcm, "((define inc (lambda (x)(+ x 1))))");  
-//   test_vm_1(err, gcm, "((define inc (lambda (x)(+ x 1))) (inc 1))");  
-//   test_vm_1(err, gcm, "((define inc (lambda (x)(+ x 1))) (display (inc 1)))");
-//   test_vm_1(err, gcm, "((define addn (lambda (x)(lambda (y) (+ x y)))) (define add1 (addn 1)) (display (add1 1)))");
-//   test_vm_1(err, gcm, "((display (if 1 2 3)))");
-//   test_vm_1(err, gcm, "((begin (display 1) (display 2) (display 3)))");
-//   test_vm_1(err, gcm, test_code_1());
-//   test_vm_1(err, gcm, test_code_2());
-//   test_vm_1(err, gcm, "((define add (lambda (a b) (+ a b))))");  
-//   test_vm_1(err, gcm, "((define (add a b) (+ a b)))");  
-//   test_vm_1(err, gcm, "((define (add a b) (+ a b)) (display (add 40 2)))");  
-//   test_file_1(err, gcm, "test/test.lisp");
-//   test_file_1(err, gcm, "test/test1.lisp");
-//   test_file_1(err, gcm, "test/test2.lisp");
-//   test_file_1(err, gcm, "test/test3.lisp");
-//   test_file_1(err, gcm, "test/test4.lisp");
-//   test_file_1(err, gcm, "test/test5.lisp");
-  test_file_1(err, gcm, "test/sicp.lisp");
+//   test_vm_1(err, gcm, "((+ 1 1))"); PL_CHECK;
+//   test_vm_1(err, gcm, "((display \"hello world!\"))"); PL_CHECK; 
+//   test_vm_1(err, gcm, "((display (- 1 1)))"); PL_CHECK;
+//   test_vm_1(err, gcm, "((display (- 1)))"); PL_CHECK;
+//   test_vm_1(err, gcm, "((display 1))"); PL_CHECK;
+//   test_vm_1(err, gcm, "((display (+ 1 1)))"); PL_CHECK;
+//   test_vm_1(err, gcm, "((display '1))"); PL_CHECK;
+//   test_vm_1(err, gcm, "((display 'x))"); PL_CHECK;
+//   test_vm_1(err, gcm, "((display '(- 1 '1)))"); PL_CHECK;
+//   test_vm_1(err, gcm, "((define a +) (display (a 1 1)))"); PL_CHECK;
+//   test_vm_1(err, gcm, "((define b (+ 1 1)) (display b))"); PL_CHECK;
+//   test_vm_1(err, gcm, "((define inc (lambda (x)(+ x 1))))"); PL_CHECK;
+//   test_vm_1(err, gcm, "((define inc (lambda (x)(+ x 1))) (inc 1))"); PL_CHECK;
+//   test_vm_1(err, gcm, "((define inc (lambda (x)(+ x 1))) (display (inc 1)))"); PL_CHECK;
+//   test_vm_1(err, gcm, "((define addn (lambda (x)(lambda (y) (+ x y)))) (define add1 (addn 1)) (display (add1 1)))"); PL_CHECK;
+//   test_vm_1(err, gcm, "((display (if 1 2 3)))"); PL_CHECK;
+//   test_vm_1(err, gcm, "((begin (display 1) (display 2) (display 3)))"); PL_CHECK;
+//   test_vm_1(err, gcm, test_code_1()); PL_CHECK;
+//   test_vm_1(err, gcm, test_code_2()); PL_CHECK;
+//   test_vm_1(err, gcm, "((define add (lambda (a b) (+ a b))))"); PL_CHECK;
+//   test_vm_1(err, gcm, "((define (add a b) (+ a b)))"); PL_CHECK;
+//   test_vm_1(err, gcm, "((define (add a b) (+ a b)) (display (add 40 2)))"); PL_CHECK;  
+//   test_file_1(err, gcm, "test/test.lisp"); PL_CHECK;
+//   test_file_1(err, gcm, "test/test1.lisp"); PL_CHECK;
+//   test_file_1(err, gcm, "test/test2.lisp"); PL_CHECK;
+//   test_file_1(err, gcm, "test/test3.lisp"); PL_CHECK;
+//   test_file_1(err, gcm, "test/test4.lisp"); PL_CHECK;
+//   test_file_1(err, gcm, "test/test5.lisp"); PL_CHECK;
+  test_file_1(err, gcm, "test/sicp.lisp"); PL_CHECK;
+//   test_file_1(err, gcm, "test/echo.lisp"); PL_CHECK;
   
-  gc_manager_halt(err, gcm); PL_CHECK;
-  
-  op_free_global(err); PL_CHECK;
   PL_FUNC_END
-  err_print(*err);
-  return 0;
+  return *err;
 }
 

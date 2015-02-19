@@ -155,7 +155,8 @@ object_t *object_array_slice(err_t **err, struct gc_manager_t_decl *gcm, object_
 
 // object verbose
 err_t *object_verbose(err_t** err, object_t* obj, int recursive, size_t indentation, size_t limit);
-err_t *object_disply(err_t **err, object_t *value);
+err_t *object_display(err_t **err, object_t *value);
+err_t *object_write(err_t **err, object_t *value);
 
 // object gc support
 err_t *object_mark(err_t **err, object_t *obj, size_t mark, size_t limit);

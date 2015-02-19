@@ -47,8 +47,11 @@ object_t *compile_exp(err_t **err, gc_manager_t *gcm, object_t *exp, object_t *c
   object_t *lambda_object_lambda = NULL;
   object_t *pc_next = NULL;
   object_t *pc_end = NULL;
+  object_t *alloc_temp = NULL;
   size_t if_else_index;
   size_t if_endif_index;
+  size_t while_begloop_index;
+  size_t while_jn_endloop_index;
   size_t gcm_stack_depth;
   size_t args_count = 0;
   size_t i;
@@ -62,6 +65,7 @@ object_t *compile_exp(err_t **err, gc_manager_t *gcm, object_t *exp, object_t *c
   gc_manager_stack_object_push(err, gcm, &lambda_object_lambda); PL_CHECK;
   gc_manager_stack_object_push(err, gcm, &pc_next); PL_CHECK;
   gc_manager_stack_object_push(err, gcm, &pc_end); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &alloc_temp); PL_CHECK;
 
   args_count_obj = gc_manager_object_alloc(err, gcm, TYPE_INT); PL_CHECK;
   object_int_init(err, args_count_obj, (object_int_value_t)-1); PL_CHECK;
@@ -124,6 +128,49 @@ object_t *compile_exp(err_t **err, gc_manager_t *gcm, object_t *exp, object_t *c
 	compile_define(err, gcm, OBJ_ARR_AT(exp,_ref,1).ptr, OBJ_ARR_AT(exp,_ref,2).ptr, code_vector); PL_CHECK;
       }
     }
+    else if(parser_symbol_eq(func_keyword, "while")){
+      if(args_count == 3){
+	// push nil
+	object_vector_ref_push(err, gcm, code_vector, op_push); PL_CHECK;
+	object_vector_ref_push(err, gcm, code_vector, g_nil); PL_CHECK;
+	
+	// begloop:
+	while_begloop_index = code_vector->part._vector.count;
+	
+        // <exp[1]>
+        compile_exp(err, gcm, OBJ_ARR_AT(exp,_ref,1).ptr, code_vector); PL_CHECK;
+
+        // jn :endloop
+        object_vector_ref_push(err, gcm, code_vector, op_jn); PL_CHECK;
+        while_jn_endloop_index = code_vector->part._vector.count;
+	alloc_temp = gc_manager_object_alloc(err, gcm, TYPE_INT);
+        object_vector_ref_push(err, gcm, code_vector, alloc_temp); PL_CHECK;
+	alloc_temp = NULL;
+
+	// pop // pop last value
+	object_vector_ref_push(err, gcm, code_vector, op_pop); PL_CHECK;
+	
+	
+        // <exp[2]>
+        compile_exp(err, gcm, OBJ_ARR_AT(exp,_ref,2).ptr, code_vector); PL_CHECK;
+	
+	// jmp :begloop
+        object_vector_ref_push(err, gcm, code_vector, op_jn); PL_CHECK;
+	
+	alloc_temp = gc_manager_object_alloc(err, gcm, TYPE_INT);
+	object_int_init(err, alloc_temp, (object_int_value_t)while_begloop_index); PL_CHECK;
+        object_vector_ref_push(err, gcm, code_vector, alloc_temp); PL_CHECK;
+	alloc_temp = NULL;
+
+        // endloop:
+        object_int_init(err, OBJ_ARR_AT(code_vector->part._vector.pdata, _ref, while_jn_endloop_index).ptr, (object_int_value_t)code_vector->part._vector.count); PL_CHECK;
+
+      }else{
+        // bad syntax
+        PL_ASSERT(0, err_typecheck);
+      }
+
+    }
     else if(parser_symbol_eq(func_keyword, "if")){
       if(args_count == 3){
         // <exp[1]>
@@ -132,7 +179,9 @@ object_t *compile_exp(err_t **err, gc_manager_t *gcm, object_t *exp, object_t *c
         // jn :endif
         object_vector_ref_push(err, gcm, code_vector, op_jn); PL_CHECK;
         if_endif_index = code_vector->part._vector.count;
-        object_vector_ref_push(err, gcm, code_vector, gc_manager_object_alloc(err, gcm, TYPE_INT)); PL_CHECK;
+	alloc_temp = gc_manager_object_alloc(err, gcm, TYPE_INT);
+        object_vector_ref_push(err, gcm, code_vector, alloc_temp); PL_CHECK;
+	alloc_temp = NULL;
 
         // <exp[2]>
         compile_exp(err, gcm, OBJ_ARR_AT(exp,_ref,2).ptr, code_vector); PL_CHECK;
@@ -148,7 +197,9 @@ object_t *compile_exp(err_t **err, gc_manager_t *gcm, object_t *exp, object_t *c
         // jn :else
         object_vector_ref_push(err, gcm, code_vector, op_jn); PL_CHECK;
         if_else_index = code_vector->part._vector.count;
-        object_vector_ref_push(err, gcm, code_vector, gc_manager_object_alloc(err, gcm, TYPE_INT)); PL_CHECK;
+	alloc_temp = gc_manager_object_alloc(err, gcm, TYPE_INT);
+        object_vector_ref_push(err, gcm, code_vector, alloc_temp); PL_CHECK;
+	alloc_temp = NULL;
 
         // <exp[2]>
         compile_exp(err, gcm, OBJ_ARR_AT(exp,_ref,2).ptr, code_vector); PL_CHECK;
@@ -156,7 +207,9 @@ object_t *compile_exp(err_t **err, gc_manager_t *gcm, object_t *exp, object_t *c
         // jmp :endif
         object_vector_ref_push(err, gcm, code_vector, op_jmp); PL_CHECK;
         if_endif_index = code_vector->part._vector.count;
-        object_vector_ref_push(err, gcm, code_vector, gc_manager_object_alloc(err, gcm, TYPE_INT)); PL_CHECK;
+	alloc_temp = gc_manager_object_alloc(err, gcm, TYPE_INT);
+        object_vector_ref_push(err, gcm, code_vector, alloc_temp); PL_CHECK;
+	alloc_temp = NULL;
 
         // else:
         object_int_init(err, OBJ_ARR_AT(code_vector->part._vector.pdata, _ref, if_else_index).ptr, (object_int_value_t)code_vector->part._vector.count); PL_CHECK;

@@ -18,6 +18,8 @@ err_t *vm_step_op_call_resolve(err_t **err, gc_manager_t *gcm, object_t *vm, obj
 
 err_t *vm_step_op_call_newline(err_t **err, gc_manager_t *gcm, object_t *vm, object_t* top_frame, object_t *func, object_t *stack, size_t args_count);
 err_t *vm_step_op_call_display(err_t **err, gc_manager_t *gcm, object_t *vm, object_t* top_frame, object_t *func, object_t *stack, size_t args_count);
+err_t *vm_step_op_call_write(err_t **err, gc_manager_t *gcm, object_t *vm, object_t* top_frame, object_t *func, object_t *stack, size_t args_count);
+err_t *vm_step_op_call_read(err_t **err, gc_manager_t *gcm, object_t *vm, object_t* top_frame, object_t *func, object_t *stack, size_t args_count);
 
 err_t *vm_step_op_call_slice(err_t **err, gc_manager_t *gcm, object_t *vm, object_t* top_frame, object_t *func, object_t *stack, size_t args_count);
 err_t *vm_step_op_call_car(err_t **err, gc_manager_t *gcm, object_t *vm, object_t* top_frame, object_t *func, object_t *stack, size_t args_count);

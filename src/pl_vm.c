@@ -215,6 +215,8 @@ err_t *vm_add_stdlib(err_t **err, gc_manager_t *gcm, object_t *vm){
   
   add_builtin_func(err, gcm, top_frame, "newline", &vm_step_op_call_newline);
   add_builtin_func(err, gcm, top_frame, "display", &vm_step_op_call_display);
+  add_builtin_func(err, gcm, top_frame, "read", &vm_step_op_call_read);
+  add_builtin_func(err, gcm, top_frame, "write", &vm_step_op_call_write);
   add_builtin_func(err, gcm, top_frame, "begin", &vm_step_op_call_begin);
 
   PL_FUNC_END;

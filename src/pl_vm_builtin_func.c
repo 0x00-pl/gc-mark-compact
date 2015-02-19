@@ -1,6 +1,7 @@
 #include "pl_vm_builtin_func.h"
 #include "pl_op_code.h"
 #include "pl_vm.h"
+#include <stdlib.h>
 
 
 err_t *vm_step_op_call_make_lambda(err_t **err, gc_manager_t *gcm, object_t *vm, object_t* top_frame, object_t *func, object_t *stack, size_t args_count){
@@ -188,7 +189,7 @@ err_t *vm_step_op_call_resolve(err_t **err, gc_manager_t *gcm, object_t *vm, obj
 
   if(key_value_pair == NULL){
     printf("can not find symbol: ");
-    object_disply(err, func);
+    object_display(err, func);
     printf("\n");
   }
   PL_ASSERT(key_value_pair!=NULL, err_out_of_range);
@@ -245,11 +246,66 @@ err_t *vm_step_op_call_display(err_t **err, gc_manager_t *gcm, object_t *vm, obj
     object_vector_pop(err, stack); PL_CHECK;
   }
   
-  object_disply(err, value); PL_CHECK;
+  object_display(err, value); PL_CHECK;
 
   object_vector_ref_push(err, gcm, stack, g_nil); PL_CHECK;
   PL_FUNC_END;
   gc_manager_stack_object_balance(gcm, gcm_stack_depth);
+  return *err;
+}
+
+err_t *vm_step_op_call_write(err_t **err, gc_manager_t *gcm, object_t *vm, object_t* top_frame, object_t *func, object_t *stack, size_t args_count){
+  size_t gcm_stack_depth;
+  size_t i;
+  object_t *value = NULL;
+
+  gcm_stack_depth = gc_manager_stack_object_get_depth(gcm);
+  gc_manager_stack_object_push(err, gcm, &vm); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &func); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &stack); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &top_frame); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &value); PL_CHECK;
+
+
+  value = object_vector_ref_index(err, stack, -1); PL_CHECK;
+  for(i=0; i<args_count; i++){
+    object_vector_pop(err, stack); PL_CHECK;
+  }
+  
+  object_write(err, value); PL_CHECK;
+
+  object_vector_ref_push(err, gcm, stack, g_nil); PL_CHECK;
+  PL_FUNC_END;
+  gc_manager_stack_object_balance(gcm, gcm_stack_depth);
+  return *err;
+}
+
+err_t *vm_step_op_call_read(err_t **err, gc_manager_t *gcm, object_t *vm, object_t* top_frame, object_t *func, object_t *stack, size_t args_count){
+  size_t gcm_stack_depth;
+  size_t i;
+  object_t *value = NULL;
+  char *line = NULL;
+  size_t n;
+
+  gcm_stack_depth = gc_manager_stack_object_get_depth(gcm);
+  gc_manager_stack_object_push(err, gcm, &vm); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &func); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &stack); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &top_frame); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &value); PL_CHECK;
+
+  for(i=0; i<args_count; i++){
+    object_vector_pop(err, stack); PL_CHECK;
+  }
+  
+  getline(&line, &n, stdin);
+  value = gc_manager_object_alloc(err, gcm, TYPE_STR); PL_CHECK;
+  object_str_init(err, value, line); PL_CHECK;
+
+  object_vector_ref_push(err, gcm, stack, value); PL_CHECK;
+  PL_FUNC_END;
+  gc_manager_stack_object_balance(gcm, gcm_stack_depth);
+  free(line);
   return *err;
 }
 

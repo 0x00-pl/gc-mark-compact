@@ -23,6 +23,7 @@ object_t *op_find;
 object_t *op_jmp;
 object_t *op_jn;
 object_t *op_push;
+object_t *op_pop;
 err_t *op_init_global(err_t **err);
 err_t *op_free_global(err_t **err);
 

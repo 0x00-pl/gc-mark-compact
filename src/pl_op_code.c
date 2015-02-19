@@ -36,6 +36,7 @@ err_t *op_init_global(err_t **err){
   op_jmp   = make_global_symbol(err, "op_jmp   "); PL_CHECK;
   op_jn    = make_global_symbol(err, "op_jn    "); PL_CHECK;
   op_push  = make_global_symbol(err, "op_push  "); PL_CHECK;
+  op_pop   = make_global_symbol(err, "op_pop   "); PL_CHECK;
 
   PL_FUNC_END
   return *err;
