@@ -91,9 +91,12 @@ int vm_step(err_t **err, object_t *vm, gc_manager_t *gcm){
   if(cur_code == op_push){
     arg1 = object_tuple_frame_get_current_code(err, top_frame); PL_CHECK;
     object_tuple_frame_inc_pc(err, top_frame); PL_CHECK;
-
     object_vector_ref_push(err, gcm, stack, arg1); PL_CHECK;
-  }else if(cur_code == op_jmp){
+  }
+  else if(cur_code == op_pop){
+    object_vector_pop(err, stack); PL_CHECK;
+  }
+  else if(cur_code == op_jmp){
     arg1 = object_tuple_frame_get_current_code(err, top_frame); PL_CHECK;
     object_tuple_frame_inc_pc(err, top_frame); PL_CHECK;
     object_type_check(err, arg1, TYPE_INT); PL_CHECK;
@@ -141,6 +144,9 @@ int vm_step(err_t **err, object_t *vm, gc_manager_t *gcm){
     }
     else if(func == g_mklmd){
       vm_step_op_call_make_lambda(err, gcm, vm, top_frame, func, stack, (size_t)call_arg_count); PL_CHECK;
+    }
+    else if(func == g_eval){
+      vm_step_op_call_eval(err, gcm, vm, top_frame, func, stack, (size_t)call_arg_count); PL_CHECK;
     }
     else if(func->type == TYPE_RAW){
       // c function
@@ -217,7 +223,10 @@ err_t *vm_add_stdlib(err_t **err, gc_manager_t *gcm, object_t *vm){
   add_builtin_func(err, gcm, top_frame, "display", &vm_step_op_call_display);
   add_builtin_func(err, gcm, top_frame, "read", &vm_step_op_call_read);
   add_builtin_func(err, gcm, top_frame, "write", &vm_step_op_call_write);
+  
   add_builtin_func(err, gcm, top_frame, "begin", &vm_step_op_call_begin);
+  add_builtin_func(err, gcm, top_frame, "eval", &vm_step_op_call_eval);
+  add_builtin_func(err, gcm, top_frame, "parser", &vm_step_op_call_parser);
 
   PL_FUNC_END;
   gc_manager_stack_object_balance(gcm, gcm_stack_depth);

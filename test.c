@@ -226,8 +226,10 @@ err_t *test_main(err_t **err, gc_manager_t *gcm){
 //   test_file_1(err, gcm, "test/test3.lisp"); PL_CHECK;
 //   test_file_1(err, gcm, "test/test4.lisp"); PL_CHECK;
 //   test_file_1(err, gcm, "test/test5.lisp"); PL_CHECK;
-  test_file_1(err, gcm, "test/sicp.lisp"); PL_CHECK;
+//   test_file_1(err, gcm, "test/sicp.lisp"); PL_CHECK;
+//   test_file_1(err, gcm, "test/while.lisp"); PL_CHECK;
 //   test_file_1(err, gcm, "test/echo.lisp"); PL_CHECK;
+  test_file_1(err, gcm, "test/eval.lisp"); PL_CHECK;
   
   PL_FUNC_END
   return *err;

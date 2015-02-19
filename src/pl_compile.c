@@ -167,6 +167,7 @@ object_t *compile_exp(err_t **err, gc_manager_t *gcm, object_t *exp, object_t *c
 
       }else{
         // bad syntax
+        printf("bad syntax. useage: (while test exp) .\n");
         PL_ASSERT(0, err_typecheck);
       }
 
@@ -765,8 +766,11 @@ err_t *compile_verbose_code(err_t **err, gc_manager_t *gcm, object_t *code, size
             break;
         }
       }
-    }else
-    if(item == op_ret){
+    }
+    else if(item == op_pop){
+      printf("pop     :\n");
+    }
+    else if(item == op_ret){
       printf("ret     :\n");
     }else{
       printf("unknow  : ");

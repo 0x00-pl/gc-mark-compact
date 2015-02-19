@@ -1,6 +1,8 @@
 #include "pl_vm_builtin_func.h"
 #include "pl_op_code.h"
 #include "pl_vm.h"
+#include "pl_compile.h"
+#include "pl_parser.h"
 #include <stdlib.h>
 
 
@@ -130,6 +132,100 @@ err_t *vm_step_op_call_lambda(err_t **err, gc_manager_t *gcm, object_t *vm, obje
   object_tuple_vm_set_top_frame(err, vm, new_frame); PL_CHECK;
 
   PL_FUNC_END
+  gc_manager_stack_object_balance(gcm, gcm_stack_depth);
+  return *err;
+}
+
+err_t *vm_step_op_call_eval(err_t **err, gc_manager_t *gcm, object_t *vm, object_t* top_frame, object_t *func, object_t *stack, size_t args_count){
+  // compile to lambda with no args
+  size_t gcm_stack_depth;
+  size_t i;
+  object_t *next_op_code = NULL;
+  object_t *new_frame = NULL;
+  object_t *lambda = NULL;
+  object_t *code_exp = NULL;
+  object_t *code = NULL;
+  object_t *prev_env = NULL;
+  object_t *new_env = NULL;
+  object_t *new_env_item = NULL;
+
+  gcm_stack_depth = gc_manager_stack_object_get_depth(gcm);
+  gc_manager_stack_object_push(err, gcm, &vm); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &func); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &stack); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &top_frame); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &next_op_code); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &new_frame); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &lambda); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &code_exp); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &code); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &prev_env); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &new_env); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &new_env_item); PL_CHECK;
+
+  PL_ASSERT(args_count==2, err_out_of_range);
+  
+  code_exp = object_vector_ref_index(err, stack, -1); PL_CHECK;
+  code = compile_global(err, gcm, code_exp); PL_CHECK;
+  
+  for(i=0; i<args_count; i++){
+    object_vector_pop(err, stack); PL_CHECK;
+  }
+  
+  lambda = object_tuple_empty_lambda_alloc(err, gcm, code); PL_CHECK;
+  
+  new_env = gc_manager_object_alloc(err, gcm, TYPE_VECTOR); PL_CHECK;
+  prev_env = object_tuple_frame_get_env(err,top_frame); PL_CHECK;
+  new_env_item = object_tuple_cons_alloc(err, gcm, g_nil, prev_env); PL_CHECK;
+  object_vector_ref_push(err, gcm, new_env, new_env_item); PL_CHECK;
+   
+  // alloc new frame
+  // test is or not tail_call
+  next_op_code = object_tuple_frame_get_current_code(err, top_frame); PL_CHECK;
+  if(next_op_code == op_ret){
+    // new_frame will return to prev_frame not cur_frame 
+    top_frame = object_tuple_frame_get_prev_frame(err, top_frame); PL_CHECK;
+  }
+  new_frame = object_tuple_frame_alloc(err, gcm, lambda, new_env, top_frame); PL_CHECK;
+  
+  object_tuple_vm_set_top_frame(err, vm, new_frame); PL_CHECK;
+
+  PL_FUNC_END;
+  gc_manager_stack_object_balance(gcm, gcm_stack_depth);
+  return *err;
+}
+
+err_t *vm_step_op_call_parser(err_t **err, gc_manager_t *gcm, object_t *vm, object_t* top_frame, object_t *func, object_t *stack, size_t args_count){
+  size_t gcm_stack_depth;
+  size_t i;
+  const char *text;
+  size_t pos;
+  object_t *str_obj = NULL;
+  object_t *code_exp = NULL;
+
+  gcm_stack_depth = gc_manager_stack_object_get_depth(gcm);
+  gc_manager_stack_object_push(err, gcm, &vm); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &func); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &stack); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &top_frame); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &str_obj); PL_CHECK;
+  gc_manager_stack_object_push(err, gcm, &code_exp); PL_CHECK;
+
+  PL_ASSERT(args_count==2, err_out_of_range);
+  str_obj = object_vector_ref_index(err, stack, -1); PL_CHECK;
+  object_type_check(err, str_obj, TYPE_STR); PL_CHECK;
+  
+  for(i=0; i<args_count; i++){
+    object_vector_pop(err, stack); PL_CHECK;
+  }
+  
+  text = str_obj->part._str.str;
+  pos = 0;
+  code_exp = parser_parse_exp(err, gcm, text, &pos); PL_CHECK;
+  
+
+  object_vector_ref_push(err, gcm, stack, code_exp); PL_CHECK;
+  PL_FUNC_END;
   gc_manager_stack_object_balance(gcm, gcm_stack_depth);
   return *err;
 }

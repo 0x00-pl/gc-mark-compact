@@ -9,6 +9,7 @@ object_t *g_cons;
 object_t *g_frame;
 object_t *g_lambda;
 object_t *g_mklmd;
+object_t *g_eval;
 object_t *g_nil;
 object_t *g_true;
 object_t *g_define;

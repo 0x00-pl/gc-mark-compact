@@ -23,6 +23,7 @@ err_t *op_init_global(err_t **err){
   g_frame  = make_global_symbol(err, "g_frame  "); PL_CHECK;
   g_lambda = make_global_symbol(err, "g_lambda "); PL_CHECK;
   g_mklmd  = make_global_symbol(err, "g_mklmd  "); PL_CHECK;
+  g_eval   = make_global_symbol(err, "g_eval   "); PL_CHECK;
   g_nil    = make_global_symbol(err, "g_nil    "); PL_CHECK;
   g_true   = make_global_symbol(err, "g_true   "); PL_CHECK;
   g_define = make_global_symbol(err, "g_define "); PL_CHECK;
@@ -46,7 +47,7 @@ err_t *op_free_global(err_t **err){
   object_halt(err, g_frame ); free(g_frame );
   object_halt(err, g_lambda); free(g_lambda);
   object_halt(err, g_mklmd ); free(g_mklmd );
-  object_halt(err, g_nil   ); free(g_nil   );
+  object_halt(err, g_eval  ); free(g_eval  );
   object_halt(err, g_define); free(g_define);
   object_halt(err, g_if    ); free(g_if    );
   object_halt(err, g_set   ); free(g_set   );
@@ -58,6 +59,7 @@ err_t *op_free_global(err_t **err){
   object_halt(err, op_jmp  ); free(op_jmp  );
   object_halt(err, op_jn   ); free(op_jn   );
   object_halt(err, op_push ); free(op_push );
+  object_halt(err, op_pop  ); free(op_pop  );
 
   return *err;
 }

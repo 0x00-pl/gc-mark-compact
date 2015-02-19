@@ -1,0 +1,1 @@
+(while 1 (begin (display (read))(newline)))
