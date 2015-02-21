@@ -47,11 +47,15 @@ err_t *object_float_init_nth(err_t **err, object_t *obj, int n, object_float_val
 err_t *object_str_init_nth(err_t **err, object_t *obj, int n, const char* text){
   object_type_check(err, obj, TYPE_STR); PL_CHECK;
   char *text_copy = NULL;
+  
+  PL_ASSERT(text!=NULL, err_null);
+  
   OBJ_ARR_AT(obj, _str, n).size = strlen(text);
   text_copy = malloc(OBJ_ARR_AT(obj, _str, n).size+1);
   strncpy(text_copy, text, OBJ_ARR_AT(obj, _str, n).size);
   text_copy[OBJ_ARR_AT(obj, _str, n).size] = '\0';
   OBJ_ARR_AT(obj, _str, n).str = text_copy;
+  
   PL_FUNC_END
   return *err;
 }
@@ -86,7 +90,8 @@ err_t *object_init_nth(err_t **err, object_t *obj, int n){
       object_float_init_nth(err, obj, n, 0); PL_CHECK;
       break;
     case TYPE_STR:
-      object_str_init_nth(err, obj, n, "undefined"); PL_CHECK;
+      OBJ_ARR_AT(obj, _str, n).size = 0;
+      OBJ_ARR_AT(obj, _str, n).str = NULL;
       break;
     case TYPE_SYMBOL:
       object_symbol_init_nth(err, obj, n, NULL); PL_CHECK;

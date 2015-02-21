@@ -6,14 +6,38 @@
 #include "pl_type.h"
 
 static object_t *make_global_symbol(err_t **err, const char *text){
-  object_t *new_symbol = (object_t*)malloc(object_sizeof(err, TYPE_STR)); PL_CHECK;
+  object_t *new_symbol_str = (object_t*)malloc(object_sizeof(err, TYPE_STR)); PL_CHECK;
+  object_t *new_symbol = (object_t*)malloc(object_sizeof(err, TYPE_SYMBOL)); PL_CHECK;
+  
+  new_symbol_str->mark = 0;
+  new_symbol_str->move_dest = NULL;
+  new_symbol_str->size = object_sizeof(err, TYPE_STR); PL_CHECK;
+  new_symbol_str->type = TYPE_STR;
+  object_str_init(err, new_symbol_str, text); PL_CHECK;
+  
   new_symbol->mark = 0;
   new_symbol->move_dest = NULL;
-  new_symbol->size=object_sizeof(err, TYPE_STR); PL_CHECK;
-  new_symbol->type=TYPE_STR;
-  object_str_init(err, new_symbol, text); PL_CHECK;
-  PL_FUNC_END_EX(, new_symbol = NULL)
+  new_symbol->size = object_sizeof(err, TYPE_SYMBOL); PL_CHECK;
+  new_symbol->type = TYPE_SYMBOL;
+  object_symbol_init(err, new_symbol, new_symbol_str); PL_CHECK;
+  
+  PL_FUNC_END_EX(
+    ,
+    free(new_symbol_str);
+    new_symbol_str = NULL;
+    free(new_symbol);
+    new_symbol = NULL;)
+  
   return new_symbol;
+}
+static int free_global_symbol(err_t **err, object_t *global_symbol){
+  object_t *symbol_str = global_symbol->part._symbol.name;
+  object_halt(err, symbol_str); PL_CHECK;
+  free(symbol_str);
+  object_halt(err, global_symbol); PL_CHECK;
+  free(global_symbol);
+  PL_FUNC_END
+  return 0;
 }
 
 err_t *op_init_global(err_t **err){
@@ -43,24 +67,27 @@ err_t *op_init_global(err_t **err){
   return *err;
 }
 err_t *op_free_global(err_t **err){
-  object_halt(err, g_cons  ); free(g_cons  );
-  object_halt(err, g_frame ); free(g_frame );
-  object_halt(err, g_lambda); free(g_lambda);
-  object_halt(err, g_mklmd ); free(g_mklmd );
-  object_halt(err, g_eval  ); free(g_eval  );
-  object_halt(err, g_define); free(g_define);
-  object_halt(err, g_if    ); free(g_if    );
-  object_halt(err, g_set   ); free(g_set   );
-  object_halt(err, g_quote ); free(g_quote );
-
-  object_halt(err, op_call ); free(op_call );
-  object_halt(err, op_ret  ); free(op_ret  );
-  object_halt(err, op_find ); free(op_find );
-  object_halt(err, op_jmp  ); free(op_jmp  );
-  object_halt(err, op_jn   ); free(op_jn   );
-  object_halt(err, op_push ); free(op_push );
-  object_halt(err, op_pop  ); free(op_pop  );
-
+  free_global_symbol(err, g_cons  ); PL_CHECK;
+  free_global_symbol(err, g_frame ); PL_CHECK;
+  free_global_symbol(err, g_lambda); PL_CHECK;
+  free_global_symbol(err, g_mklmd ); PL_CHECK;
+  free_global_symbol(err, g_eval  ); PL_CHECK;
+  free_global_symbol(err, g_nil   ); PL_CHECK;
+  free_global_symbol(err, g_true  ); PL_CHECK;
+  free_global_symbol(err, g_define); PL_CHECK;
+  free_global_symbol(err, g_if    ); PL_CHECK;
+  free_global_symbol(err, g_set   ); PL_CHECK;
+  free_global_symbol(err, g_quote ); PL_CHECK;
+  
+  free_global_symbol(err, op_call ); PL_CHECK;
+  free_global_symbol(err, op_ret  ); PL_CHECK;
+  free_global_symbol(err, op_find ); PL_CHECK;
+  free_global_symbol(err, op_jmp  ); PL_CHECK;
+  free_global_symbol(err, op_jn   ); PL_CHECK;
+  free_global_symbol(err, op_push ); PL_CHECK;
+  free_global_symbol(err, op_pop  ); PL_CHECK;
+  
+  PL_FUNC_END
   return *err;
 }
 
@@ -344,6 +371,16 @@ object_t *object_tuple_env_resolve(err_t **err, gc_manager_t *gcm, object_t *env
   for(i=1; i<env->part._vector.count; i++){
     key_value_pair = object_vector_ref_index(err, env, (int)i); PL_CHECK;
     key = object_tuple_cons_get_car(err, key_value_pair); PL_CHECK;
+    
+    object_type_check(err, key, TYPE_SYMBOL); PL_CHECK;
+    object_type_check(err, symbol, TYPE_SYMBOL); PL_CHECK;
+    
+//     printf("[debug] test str ");
+//     object_write(err, key); PL_CHECK;
+//     printf(" == ");
+//     object_write(err, symbol); PL_CHECK;
+//     printf("\n");
+    
     if(object_str_eq(key->part._symbol.name, symbol->part._symbol.name)){
       // found
       break;

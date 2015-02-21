@@ -101,8 +101,8 @@ err_t *gc_manager_object_pool_resize(err_t **err, gc_manager_t *manager, size_t 
 
   new_maxsize = manager->object_pool_maxsize;
   while(new_maxsize < new_size){
- // printf("[debug] change "FMT_TYPE_SIZE_T" / "FMT_TYPE_SIZE_T" => "FMT_TYPE_SIZE_T"\n",
- //        manager->object_pool_size, manager->object_pool_maxsize, new_size);
+//  printf("[debug] change "FMT_TYPE_SIZE_T" / "FMT_TYPE_SIZE_T" => "FMT_TYPE_SIZE_T"\n",
+//         manager->object_pool_size, manager->object_pool_maxsize, new_size);
     new_maxsize *= 2;
   }
 
@@ -111,6 +111,9 @@ err_t *gc_manager_object_pool_resize(err_t **err, gc_manager_t *manager, size_t 
 
   gc_manager_mark(err, manager); PL_CHECK;
   gc_manager_compact(err, manager, new_object_pool, new_maxsize); PL_CHECK;
+  
+//  printf("[debug] cpmpact "FMT_TYPE_SIZE_T" => "FMT_TYPE_SIZE_T"\n",
+//         manager->object_pool_maxsize/2, manager->object_pool_size);
 
   PL_FUNC_END
 

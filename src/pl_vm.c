@@ -7,6 +7,7 @@
 #include "pl_compile.h"
 #include "pl_op_code.h"
 #include "pl_vm_builtin_func.h"
+#include <stdio.h>
 
 // vm:{top_frame:frame(), }
 object_t *vm_alloc(err_t **err, gc_manager_t *gcm, object_t *code){
@@ -127,19 +128,17 @@ int vm_step(err_t **err, object_t *vm, gc_manager_t *gcm){
 //     printf("call:(");
 //     for(i=0; i<(size_t)call_arg_count; i++){
 //       if(i!=0){printf(" ");}
-// //       parser_verbose(err, );
-// 	object_disply(err, object_vector_ref_index(err, stack, (int)i-(int)call_arg_count));
-//       
+// // //       parser_verbose(err, );
+// 	object_display(err, object_vector_ref_index(err, stack, (int)i-(int)call_arg_count));
+// //       
 //     }
 //     printf(")\n");
     
     func = object_vector_ref_index(err, stack, -(int)call_arg_count); PL_CHECK;
 
     // built-in function
-    if(func->type == TYPE_SYMBOL){
-      vm_step_op_call_resolve(err, gcm, vm, top_frame, func, stack, (size_t)call_arg_count); PL_CHECK;
-    }
-    else if(func == g_define || func == g_set){
+
+    if(func == g_define || func == g_set){
       vm_step_op_call_define(err, gcm, vm, top_frame, func, stack, (size_t)call_arg_count); PL_CHECK;
     }
     else if(func == g_mklmd){
@@ -147,6 +146,9 @@ int vm_step(err_t **err, object_t *vm, gc_manager_t *gcm){
     }
     else if(func == g_eval){
       vm_step_op_call_eval(err, gcm, vm, top_frame, func, stack, (size_t)call_arg_count); PL_CHECK;
+    }
+    else if(func->type == TYPE_SYMBOL){
+      vm_step_op_call_resolve(err, gcm, vm, top_frame, func, stack, (size_t)call_arg_count); PL_CHECK;
     }
     else if(func->type == TYPE_RAW){
       // c function

@@ -17,6 +17,7 @@ static err_t *eval_file_load_file(err_t **err, const char *filename, char **pdes
   size_t ifile_size;
   FILE *ifile = fopen(filename, "r");
   if(!ifile){
+    printf("file not found : %s\n", filename);
     PL_ASSERT(0, err_io);
     return *err;
   }
@@ -43,5 +44,6 @@ err_t *eval_file(err_t **err, gc_manager_t *gcm, const char *filename){
   vm_eval_text(err, gcm, text); PL_CHECK;
   
   PL_FUNC_END;
+  free(text);
   return *err;
 }
