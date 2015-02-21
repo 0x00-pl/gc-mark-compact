@@ -4,4 +4,4 @@ dev-cpp/build/
 dev-cpp/Makefile.*
 dev-cpp/pl_gc_pjt.layout
 src/ignore/
-
+*.kdev_include_paths
