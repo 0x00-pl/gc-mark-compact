@@ -166,12 +166,17 @@ err_t *vm_step_op_call_eval(err_t **err, gc_manager_t *gcm, object_t *vm, object
   PL_ASSERT(args_count==2, err_out_of_range);
   
   code_exp = object_vector_ref_index(err, stack, -1); PL_CHECK;
-  code = compile_global(err, gcm, code_exp); PL_CHECK;
   
   for(i=0; i<args_count; i++){
     object_vector_pop(err, stack); PL_CHECK;
   }
   
+  if(code_exp == g_nil){
+    object_vector_ref_push(err, gcm, stack, g_nil); PL_CHECK;
+    goto fin;
+  }
+  
+  code = compile_global(err, gcm, code_exp); PL_CHECK;
   lambda = object_tuple_empty_lambda_alloc(err, gcm, code); PL_CHECK;
   
   new_env = gc_manager_object_alloc(err, gcm, TYPE_VECTOR); PL_CHECK;
@@ -221,10 +226,21 @@ err_t *vm_step_op_call_parser(err_t **err, gc_manager_t *gcm, object_t *vm, obje
   
   text = str_obj->part._str.str;
   pos = 0;
-  code_exp = parser_parse_exp(err, gcm, text, &pos); PL_CHECK;
+  code_exp = parser_parse_exp(err, gcm, text, &pos);
   
-
-  object_vector_ref_push(err, gcm, stack, code_exp); PL_CHECK;
+  if(*err != NULL){
+    // handle bad synatx expect
+    err_free(*err);
+    *err = NULL;
+    code_exp = NULL;
+  }
+  
+  if(code_exp != NULL){
+    object_vector_ref_push(err, gcm, stack, code_exp); PL_CHECK;
+  }else{
+    printf("[debug] synatx error. \n");
+    object_vector_ref_push(err, gcm, stack, g_nil); PL_CHECK;
+  }
   PL_FUNC_END;
   gc_manager_stack_object_balance(gcm, gcm_stack_depth);
   return *err;
