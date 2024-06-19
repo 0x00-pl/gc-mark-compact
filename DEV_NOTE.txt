@@ -1,8 +1,8 @@
-±àÂë×¢Òâ
+ç¼–ç æ³¨æ„
 ===
-1. ±»gcµÄobjectÓ¦¸ÃÓÉgc_manager_object_array_alloc()Ò»ÏµÁĞº¯ÊıÉêÇë
-2. ±»ÉêÇëµÄ¶ÔÏóÊÇÃ»ÓĞ±»³õÊ¼»¯µÄ, ĞèÒªobject_xxx_init()À´³õÊ¼»¯, ¶ÔÓÚÊı×é,Ê¹ÓÃobject_xxx_init_nth() .
-3. ´íÎó´¦Àí, Ê¹ÓÃerr_t **err À´ÅäºÏºêÊ¹ÓÃ. ²»ÒªÔÚÖĞÍ¾Ê¹ÓÃreturnÔÚÆÆ»µ½á¹¹, ¸ÄÎªgoto fin .
-4. Ã¿¸öobject_t*Ö¸ÕëÔÚ´¥·¢gcµÄÊ±ºò¶¼ÊÇĞèÒª±»ÖØ¶¨ÏòµÄ. Ê¹ÓÃgc_manager_stack_object_get_depth(), gc_manager_stack_object_push(), gc_manager_stack_object_balance() ÕâÈı¸öº¯ÊıÅäºÏ.
-4.1. ÒÑÖªbug: gc_manager_stack_object_push() ¶ÔÄ³¸öÖ¸ÕëÊ¹ÓÃÁ½´ÎµÄ»°, Õâ¸öÖ¸Õë»á±»ÖØ¶¨ÏòÁ½´Îµ½Ò»¸ö´íÎóµÄµØÖ·.
-5. µ±aÊÇobject_t*Ê±, ²»ÒªĞ´a.b= f(c)½á¹¹µÄ´úÂë. Èç¹ûf´¥·¢ÁËgc,Ôòa»á±»ÖØ¶¨Ïò, µ¼ÖÂÎ´¶¨ÒåµÄĞĞÎª.
+1. è¢«gcçš„objectåº”è¯¥ç”±gc_manager_object_array_alloc()ä¸€ç³»åˆ—å‡½æ•°ç”³è¯·
+2. è¢«ç”³è¯·çš„å¯¹è±¡æ˜¯æ²¡æœ‰è¢«åˆå§‹åŒ–çš„, éœ€è¦object_xxx_init()æ¥åˆå§‹åŒ–, å¯¹äºæ•°ç»„,ä½¿ç”¨object_xxx_init_nth() .
+3. é”™è¯¯å¤„ç†, ä½¿ç”¨err_t **err æ¥é…åˆå®ä½¿ç”¨. ä¸è¦åœ¨ä¸­é€”ä½¿ç”¨returnåœ¨ç ´åç»“æ„, æ”¹ä¸ºgoto fin .
+4. æ¯ä¸ªobject_t*æŒ‡é’ˆåœ¨è§¦å‘gcçš„æ—¶å€™éƒ½æ˜¯éœ€è¦è¢«é‡å®šå‘çš„. ä½¿ç”¨gc_manager_stack_object_get_depth(), gc_manager_stack_object_push(), gc_manager_stack_object_balance() è¿™ä¸‰ä¸ªå‡½æ•°é…åˆ.
+4.1. å·²çŸ¥bug: gc_manager_stack_object_push() å¯¹æŸä¸ªæŒ‡é’ˆä½¿ç”¨ä¸¤æ¬¡çš„è¯, è¿™ä¸ªæŒ‡é’ˆä¼šè¢«é‡å®šå‘ä¸¤æ¬¡åˆ°ä¸€ä¸ªé”™è¯¯çš„åœ°å€.
+5. å½“aæ˜¯object_t*æ—¶, ä¸è¦å†™a.b= f(c)ç»“æ„çš„ä»£ç . å¦‚æœfè§¦å‘äº†gc,åˆ™aä¼šè¢«é‡å®šå‘, å¯¼è‡´æœªå®šä¹‰çš„è¡Œä¸º.
